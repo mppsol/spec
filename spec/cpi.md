@@ -1,6 +1,6 @@
 # MPP.sol CPI Primitive
 
-**Status:** Draft v0.1
+**Status:** Draft v0.1 (with v0.1 implementation notes inline)
 **Last updated:** 2026-05-05
 **Editors:** psyto
 
@@ -12,6 +12,32 @@ resource by invoking another program in the same transaction.
 This is the differentiating capability of MPP.sol versus all other MPP
 adapters: MPP becomes an **on-chain composable primitive**, not just an
 off-chain HTTP convention.
+
+---
+
+## v0.1 implementation reality (read this first)
+
+The full design described below assumes that return data set by `Pay`
+or `SettleViaSession` is readable by a subsequent `VerifyPaidResult`
+CPI in the same call stack. **It is not.** Solana's runtime clears
+return data at the start of every program invocation — including CPIs
+— so a parent program that calls `Pay` then `VerifyPaidResult`
+back-to-back via CPI sees empty return data inside `VerifyPaidResult`.
+
+**v0.1 ships with a simplified `VerifyPaidResult`** that only checks
+the Ed25519 server-signature on the canonical result message. The
+on-chain payment-binding guarantee in v0.1 is replaced by an off-chain
+nonce-management guarantee: servers only sign result hashes for nonces
+they issued challenges for, so possession of a valid `(nonce,
+signed_result)` pair implies payment was made off-chain.
+
+**v0.2 will restore on-chain payment-binding** by adding an optional
+Receipt account to `Pay` and `SettleViaSession` (rent-bearing,
+persistent across CPIs and tx boundaries) that `VerifyPaidResult` can
+look up by nonce. See §6 for the design.
+
+The Args, Accounts, and security sections below describe the v0.2
+design with `[v0.1: …]` callouts where the implementation differs.
 
 ---
 
@@ -125,7 +151,8 @@ struct PayArgs {
     slot: u64,
   }
   ```
-  Total: **140 bytes** (well under the 1024-byte return-data limit).
+  Total: **148 bytes** (4 + 32 + 32 + 8 + 32 + 32 + 8; well under the
+  1024-byte return-data limit).
 - If `receipt_account` provided, also persists the receipt as an account
   for cross-transaction consumption.
 
@@ -164,22 +191,24 @@ struct VerifyPaidResultArgs {
   request_hash: [u8; 32],
   result_hash: [u8; 32],        // hash of the data the server returned
   server_pubkey: Pubkey,
+  server_signature: [u8; 64],   // server's Ed25519 signature; verified by
+                                // the precompile companion ix
 }
 ```
 
-**Accounts:** instructions sysvar, optionally a receipt account (if
-`Pay` persisted one).
+**Accounts:** instructions sysvar, optionally a receipt account (when
+`Pay`/`SettleViaSession` persisted one in v0.2+).
 
 **Effects:**
 
-1. Reads return data from the prior instruction (or the receipt account)
-   to confirm a `Pay` or `SettleViaSession` happened in this tx with the
-   matching `nonce`, `request_hash`, and recipient = `server_pubkey`'s
-   token account.
+1. **[v0.2 only — not in v0.1]** Reads the optional receipt account (or
+   return data, where the runtime allows) to confirm a `Pay` or
+   `SettleViaSession` happened in this tx with the matching `nonce`,
+   `request_hash`, and recipient = `server_pubkey`'s token account.
 2. Reads the instructions sysvar to confirm an Ed25519 precompile
    instruction in this tx verified `server_pubkey`'s signature over the
-   canonical bytes `(nonce || request_hash || result_hash)` with the
-   `MPP.SOL/RESULT01` domain separator.
+   canonical message `(nonce || request_hash || result_hash ||
+   MPP.SOL/RESULT01)`.
 3. Returns success (no state change). On failure, the instruction
    reverts, which by transaction atomicity reverts the entire tx
    including any caller-program state changes that depended on this
@@ -189,17 +218,36 @@ This is the instruction caller programs CPI into when they want to be
 absolutely sure that (a) the payment was made and (b) the data they're
 about to use was signed by the server they paid.
 
+**[v0.1 caveat]** Step 1 is omitted in v0.1. Verification is Ed25519-only.
+The "did Pay happen" guarantee in v0.1 is enforced off-chain via the
+nonce model (servers only sign result hashes for nonces they issued
+challenges for). Caller programs that need on-chain atomic payment-binding
+should compose `Pay` and `VerifyPaidResult` in the same parent
+instruction so that any failure of `Pay` reverts the whole tx — but be
+aware that `VerifyPaidResult` itself does not assert `Pay` ran.
+
 ### 4.4 `GetReceipt`
 
-CPI-callable, read-only. Returns the structured receipt for a payment
-made earlier in the same transaction.
+CPI-callable, read-only. Asserts a return-data receipt for the given
+nonce exists at the moment of the call and re-emits it.
 
 **Args:** `{ nonce: [u8; 32] }`
-**Effects:** Re-emits the matching return data block. Useful when the
-caller program is multiple CPIs deep and the original return data has
-been overwritten.
+**Effects:** Looks up return data set earlier in the same call stack
+and re-emits it via `set_return_data`. Reverts if no receipt is found
+or the nonce mismatches.
+
+**[v0.1 caveat]** Like `VerifyPaidResult`, this works only within a
+single program-invocation call stack; Solana's runtime clears return
+data on entry to each program. v0.2's receipt-account variant will
+make this useful across CPIs and tx boundaries.
 
 ## 5. Composition patterns
+
+> **v0.1 note:** these patterns assume `VerifyPaidResult` enforces
+> on-chain payment-binding (§4.3 step 1). In v0.1 it does not — the
+> patterns still work but the `VerifyPaidResult` step only validates
+> the Ed25519 server signature. Atomic payment-binding waits for v0.2's
+> receipt-account variant.
 
 ### 5.1 Oracle consumer (perp DEX)
 
@@ -271,18 +319,32 @@ This makes per-instruction pay-per-use feasible for any Solana program.
 
 Two persistence modes:
 
-| Mode | Cost | Lifetime | Use |
+| Mode | Cost | Lifetime | On-chain readable from a separate program? |
 | --- | --- | --- | --- |
-| Return data | Free | Until next ix overwrites | Same-tx composition (most common). |
-| Receipt account | Rent (~0.002 SOL for ~200 bytes) | Until explicitly closed | Cross-tx claims, audit trails, on-chain reputation. |
+| Return data | Free | Cleared at the start of every program invocation (CPI included) | **No** — Solana runtime clears it before each program call |
+| Receipt account | Rent (~0.002 SOL for ~200 bytes) | Until explicitly closed | Yes |
 
-A receipt account, when used, is a PDA of `mppsol_cpi` keyed by `nonce`
-that records the same fields as the return-data struct plus a `claimed`
-flag. A second `Claim` instruction can mark it consumed and close it,
-returning rent to the caller.
+**v0.1 reality:** Solana clears the return-data slot at the start of
+every program invocation, so return data is *not* useful for cross-CPI
+coordination as the original spec assumed. Pay still emits structured
+return data via `set_return_data` for off-chain consumers (RPC clients
+calling `simulateTransaction` can read it from the result), but it
+cannot be read by a subsequent `VerifyPaidResult` CPI within the same
+parent instruction.
 
-Recommendation: **default to return data**. Use accounts only when an
-audit trail or cross-tx receipt is genuinely required.
+**v0.2 plan:** add an optional `receipt_account` parameter to `Pay` and
+`SettleViaSession`. When present, the program writes a PDA of
+`mppsol_cpi` keyed by `(payer, nonce)` that records the same fields as
+the return-data struct plus a `claimed` flag. `VerifyPaidResult` looks
+up this PDA by nonce to enforce atomic on-chain payment-binding. A
+`ClaimReceipt` instruction marks it consumed and closes it, returning
+rent to the payer.
+
+**v0.1 recommendation:** for simple flows where the off-chain server
+controls nonce issuance (the common case), the v0.1 nonce-binding model
+is sufficient — possession of a server-signed result implies the server
+saw payment off-chain. For atomic on-chain payment-binding, wait for
+v0.2 and the receipt-account variant.
 
 ## 7. Security
 
@@ -312,8 +374,10 @@ salted hash that the caller program reveals atomically.
 ### 7.4 Ed25519 precompile binding
 `VerifyPaidResult` MUST verify, via the instructions sysvar, that the
 matching Ed25519 precompile instruction is *in the same transaction* and
-that its `(pubkey, message, sig)` tuple matches the args. A naive
-implementation that trusts return data alone is forgeable.
+that its `(pubkey, message, sig)` tuple matches the args. This is the
+sole verification step in v0.1 (per §4.3 caveat); a naive implementation
+that trusts return data alone is forgeable AND, in current Solana,
+unreadable across CPIs.
 
 ### 7.5 Same-tx-only assumption
 Return data is cleared by the next non-CPI instruction. CPI calls do not
@@ -373,20 +437,26 @@ in §5.
 
 ## 11. Open questions
 
+- **Receipt account variant for `Pay` / `SettleViaSession` (v0.2).** Top
+  priority — restores on-chain payment-binding (lost in v0.1 due to
+  Solana's per-invocation return-data clearing). Design: optional
+  `receipt_account` PDA keyed by `(payer, nonce)` recording the same
+  fields as the return-data struct plus a `claimed` flag.
+  `VerifyPaidResult` looks it up by nonce; `ClaimReceipt` marks consumed.
 - **Multi-debit `SettleViaSession` via CPI.** Currently single-debit per
   CPI for simplicity; multi-debit batch is reserved for the standalone
   `mppsol_session::Settle` path used by servers. Worth reconsidering for
   high-throughput consumer programs.
-- **Cross-program receipt routing.** Should a caller program be able to
-  hand off a return-data receipt to a deeper CPI without copying it?
-  Solana's return-data model says yes (CPI inherits return data) but
-  needs verification.
-- **Return-data overflow.** 1024-byte cap. Today's PayReturn is 140
-  bytes; future fields (multiple recipients, fee splits) could grow.
-  Cap discipline needed.
+- **Return-data overflow.** 1024-byte cap. Today's PayReturn is 148
+  bytes (corrected from the 140 in earlier draft); future fields
+  (multiple recipients, fee splits) could grow. Cap discipline needed.
 - **Rent reclamation for receipt accounts.** Should anyone be able to
   close an expired receipt for the rent, or only the original payer?
   Current spec: only payer; review for v0.2.
+- **PDA-callable `Pay` (v0.2).** v0.1 types `payer_authority` as a
+  `Signer` for ergonomic test/end-user use. Programs invoking `Pay`
+  via CPI from a PDA-controlled token account need a `pay_via_cpi`
+  variant that uses `CpiContext::new_with_signer` with the PDA seeds.
 
 ## 12. References
 
