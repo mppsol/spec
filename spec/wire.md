@@ -131,7 +131,7 @@ struct Debit {
 }
 ```
 
-Total: **122 bytes**. The server MUST verify the signature, fetch the session
+Total: **104 bytes**. The server MUST verify the signature, fetch the session
 account, check `amount ≤ session.remaining_cap`, `expiry ≥ now`,
 `sequence > session.last_seen_sequence`, and the cluster match. On success
 the server records the new `last_seen_sequence` and reduces `remaining_cap`

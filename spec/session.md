@@ -22,7 +22,7 @@ Solana transaction per request — even at $0.00025 per tx, the per-request
 overhead dominates. Sessions invert the cost model:
 
 - **Once on-chain:** owner opens a session, escrowing a cap of tokens.
-- **Many off-chain:** owner's authorized signer signs lightweight 122-byte
+- **Many off-chain:** owner's authorized signer signs lightweight 104-byte
   debit messages per request. The server accepts these, returns the
   resource, and accumulates them locally.
 - **Once on-chain:** server periodically submits a Settle instruction
