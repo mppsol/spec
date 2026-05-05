@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MPP.sol live demo</title>
+<style>
+:root {
+  --bg: #0a0a0c;
+  --bg-soft: #14141a;
+  --bg-card: #1a1a22;
+  --fg: #e8e8ee;
+  --fg-dim: #9da0ad;
+  --fg-faint: #6b6e7a;
+  --accent: #14F195;
+  --accent-2: #9945FF;
+  --orange: #FFB800;
+  --red: #FF6B6B;
+  --border: #2a2a36;
+  --code-bg: #0f0f14;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg); color: var(--fg);
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 16px; line-height: 1.55; min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+.viewport {
+  max-width: 1100px; margin: 0 auto; padding: 32px 36px;
+}
+.titlebar {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 24px;
+  padding-bottom: 16px; border-bottom: 1px solid var(--border);
+}
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.red { background: #ff5f57; }
+.dot.yellow { background: #ffbd2e; }
+.dot.green { background: #28ca42; }
+.title-text {
+  margin-left: 12px; color: var(--fg-dim); font-size: 0.9em; letter-spacing: 0.04em;
+}
+.title-brand { color: var(--accent); font-weight: 600; }
+.title-sub { color: var(--fg-faint); margin-left: 8px; }
+
+.terminal {
+  font-size: 15px; line-height: 1.55;
+}
+.line { display: block; min-height: 1.55em; white-space: pre-wrap; word-break: break-all; }
+.line.muted { color: var(--fg-faint); }
+.line.dim { color: var(--fg-dim); }
+.line.cmd { color: var(--accent); }
+.line.cmd::before { content: "$ "; color: var(--fg-faint); }
+.line.comment { color: var(--fg-faint); }
+.line.comment::before { content: "# "; color: var(--fg-faint); }
+.line.arrow { color: var(--accent); }
+.line.arrow::before { content: "→ "; color: var(--accent); }
+.line.warn { color: var(--orange); }
+.line.warn::before { content: "⚠ "; color: var(--orange); }
+.line.success { color: var(--accent); font-weight: 600; }
+.line.success::before { content: "✓ "; color: var(--accent); }
+.line.json { color: var(--fg-dim); padding-left: 1ch; font-size: 0.92em; }
+.line.error { color: var(--red); }
+
+.cursor {
+  display: inline-block; width: 0.55ch; height: 1.05em; vertical-align: text-bottom;
+  background: var(--accent); margin-left: 2px;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+.hidden { display: none !important; }
+
+.section-divider {
+  margin: 14px 0 8px; padding-top: 8px; border-top: 1px dashed var(--border);
+  color: var(--accent-2); font-size: 0.85em; text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.code {
+  display: inline-block; padding: 1px 6px; background: var(--bg-card);
+  border: 1px solid var(--border); border-radius: 3px; color: var(--accent);
+  font-size: 0.92em;
+}
+.url { color: var(--accent-2); text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="viewport">
+
+  <div class="titlebar">
+    <span class="dot red"></span>
+    <span class="dot yellow"></span>
+    <span class="dot green"></span>
+    <span class="title-text">
+      <span class="title-brand">MPP.sol</span>
+      <span class="title-sub">— live devnet demo · payer ↔ server in one terminal</span>
+    </span>
+  </div>
+
+  <div class="terminal" id="term"></div>
+
+</div>
+
+<script>
+const term = document.getElementById('term');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function cls(s) {
+  const map = {
+    "$": "cmd", "#": "comment", "->": "arrow",
+    "warn": "warn", "ok": "success", "json": "json",
+    "muted": "muted", "dim": "dim", "err": "error", "div": "section-divider"
+  };
+  return map[s] || "";
+}
+
+function autoScroll() {
+  window.scrollTo({ top: document.body.scrollHeight, behavior: 'instant' });
+}
+
+async function typeLine(text, kind = "", speed = 8) {
+  const line = document.createElement('span');
+  line.className = `line ${cls(kind)}`;
+  term.appendChild(line);
+
+  const cursor = document.createElement('span');
+  cursor.className = 'cursor';
+  line.appendChild(cursor);
+
+  for (const ch of text) {
+    const span = document.createElement('span');
+    span.textContent = ch;
+    line.insertBefore(span, cursor);
+    if (speed) await sleep(speed + Math.random() * speed);
+  }
+  cursor.remove();
+  autoScroll();
+}
+
+async function blank() {
+  const sp = document.createElement('span');
+  sp.className = 'line';
+  sp.innerHTML = '&nbsp;';
+  term.appendChild(sp);
+}
+
+async function divider(label) {
+  const d = document.createElement('div');
+  d.className = 'section-divider';
+  d.textContent = label;
+  term.appendChild(d);
+  await sleep(200);
+}
+
+function shortPub(s, n=8) {
+  return s.length > n*2+3 ? `${s.slice(0,n)}…${s.slice(-n)}` : s;
+}
+
+// Parse the challenge header into key/value pairs for prettier display.
+function parseHeader(raw) {
+  const params = {};
+  const m = raw.match(/^Payment\s+(.*)$/);
+  if (!m) return params;
+  const re = /([\w-]+)="([^"]*)"/g;
+  let mm;
+  while ((mm = re.exec(m[1])) !== null) params[mm[1]] = mm[2];
+  return params;
+}
+
+async function startDemo() {
+  const FLOW = window.__FLOW;
+  if (!FLOW) {
+    await typeLine("ERROR: window.__FLOW not set. Run via record.mjs.", "err", 0);
+    return;
+  }
+  const SLOW = 18, MED = 8, FAST = 3;
+  const ch = parseHeader(FLOW.challenge);
+  const rc = FLOW.receipt ? parseHeader(FLOW.receipt) : {};
+
+  await divider("STEP 1 — set up MPP server (devnet, demo USDC mint)");
+  await typeLine(`bun run examples/hono.ts`, "$", FAST);
+  await typeLine(`Listening on http://localhost:3737`, "->", FAST);
+  await typeLine(`Recipient: ${shortPub(FLOW.setup.recipientAta)}`, "muted", 0);
+  await typeLine(`Mint:      ${shortPub(FLOW.setup.mint)}  (devnet demo USDC)`, "muted", 0);
+  await typeLine(`Cluster:   ${FLOW.setup.cluster}`, "muted", 0);
+  await sleep(500);
+
+  await blank();
+  await divider("STEP 2 — agent fetches the resource (no Authorization)");
+  await typeLine(`bun run examples/pay-direct.ts`, "$", FAST);
+  await typeLine(`fetch http://localhost:3737/v1/joke`, "#", 0);
+  await sleep(300);
+  await typeLine(`HTTP/1.1 402 Payment Required`, "warn", 0);
+  await typeLine(`www-authenticate:`, "muted", 0);
+  await typeLine(`  realm="${ch.realm}"`, "json", 0);
+  await typeLine(`  methods="${ch.methods}"`, "json", 0);
+  await typeLine(`  solana-cluster="${ch['solana-cluster']}"`, "json", 0);
+  await typeLine(`  solana-recipient="${shortPub(ch['solana-recipient'])}"`, "json", 0);
+  await typeLine(`  solana-mint="${shortPub(ch['solana-mint'])}"`, "json", 0);
+  await typeLine(`  solana-amount="${ch['solana-amount']}"`, "json", 0);
+  await typeLine(`  solana-nonce="${shortPub(ch['solana-nonce'], 12)}"`, "json", 0);
+  await typeLine(`  solana-deadline="${ch['solana-deadline']}"`, "json", 0);
+  await sleep(500);
+
+  await blank();
+  await divider("STEP 3 — agent pays (real Solana tx on devnet)");
+  await typeLine(`build SPL transfer (${FLOW.setup.amount} atomic = 0.001 USDC) + Memo(nonce)`, "#", 0);
+  await typeLine(`signing with ${shortPub(FLOW.setup.payer)}…`, "#", 0);
+  await typeLine(`sendAndConfirmTransaction`, "$", FAST);
+  await sleep(900);
+  await typeLine(`tx ${shortPub(FLOW.tx, 14)}`, "->", 0);
+  await typeLine(`confirmed in slot ${rc.slot || "—"}`, "->", 0);
+  await sleep(500);
+
+  await blank();
+  await divider("STEP 4 — agent retries with Authorization: Payment");
+  await typeLine(`fetch http://localhost:3737/v1/joke -H "Authorization: Payment scheme=solana-direct, signature=…, nonce=…"`, "#", 0);
+  await sleep(400);
+  await typeLine(`server fetches tx via RPC, verifies SPL transfer + Memo nonce binding…`, "#", 0);
+  await sleep(600);
+  await typeLine(`HTTP/1.1 ${FLOW.response.status} OK`, "ok", 0);
+  await typeLine(`payment-receipt:`, "muted", 0);
+  await typeLine(`  scheme="solana-direct"`, "json", 0);
+  await typeLine(`  tx="${shortPub(rc.tx, 16)}"`, "json", 0);
+  await typeLine(`  slot="${rc.slot}" cluster="${rc.cluster}"`, "json", 0);
+  await typeLine(`  recipient="${shortPub(rc.recipient)}"`, "json", 0);
+  await typeLine(`  mint="${shortPub(rc.mint)}" amount="${rc.amount}"`, "json", 0);
+  await typeLine(``, "", 0);
+  await typeLine(FLOW.response.body, "", FAST);
+  await sleep(700);
+
+  await blank();
+  await divider("DONE — verifiable on-chain at:");
+  await typeLine(`https://explorer.solana.com/tx/${FLOW.tx}?cluster=devnet`, "ok", 0);
+
+  // Final cursor
+  const sp = document.createElement('span');
+  sp.className = 'line';
+  sp.innerHTML = '&nbsp;<span class="cursor"></span>';
+  term.appendChild(sp);
+}
+
+if (document.readyState === 'complete') {
+  if (window.__START) startDemo();
+} else {
+  window.addEventListener('load', () => { if (window.__START) startDemo(); });
+}
+window.startDemo = startDemo;
+</script>
+</body>
+</html>
