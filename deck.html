@@ -238,12 +238,16 @@ table.t code { font-size: 0.88em; }
     <h2>A CPI primitive<br>EVM <span class="orange">structurally</span> can't match.</h2>
     <div class="ascii" style="margin-top: 12px;">caller program ──CPI──▶ mppsol_cpi
                             │
-                            ├─ Pay  ───────▶ atomic on-chain payment + return data
+                            ├─ pay_with_receipt ───▶ payment + on-chain Receipt PDA
                             ├─ SettleViaSession ───▶ session debit + receipt
-                            └─ VerifyPaidResult ───▶ Ed25519-verifies server's signed result
+                            └─ verify_paid_result_with_receipt
+                                 ├─ Ed25519-verifies server's signed result
+                                 └─ asserts Receipt PDA matches (atomic binding)
 
-Anyone can compose paid off-chain resources (oracles, KYC,
-signal feeds) into Solana programs, atomically.
+Anyone composes paid off-chain resources (oracles, KYC, signal
+feeds) into Solana programs, atomically. Receipt PDAs persist
+across CPIs and tx boundaries. Atomic on-chain payment-binding
+shipped v0.1.1.
 
 Why EVM can't: no atomic multi-instruction tx model + no
 Ed25519 precompile pattern for cheap on-chain verification.</div>
@@ -285,10 +289,10 @@ Ed25519 precompile pattern for cheap on-chain verification.</div>
         <tr><td>HTTP 402 wire protocol</td><td class="ok">✓ shipped</td><td class="dim">37 vitest, parser/serializer</td></tr>
         <tr><td>Direct mode (one-shot)</td><td class="ok">✓ mainnet-ready</td><td class="dim">40 server tests, 8 error codes</td></tr>
         <tr><td>Session program (Open/Settle/Topup/Revoke/Close)</td><td class="ok">✓ on devnet</td><td class="dim">11 anchor tests, full Ed25519</td></tr>
-        <tr><td>CPI primitive (Pay/SettleViaSession/VerifyPaidResult/GetReceipt)</td><td class="ok">✓ on devnet</td><td class="dim">v0.1 spec-conformant</td></tr>
+        <tr><td>CPI primitive (12 instructions across 2 programs)</td><td class="ok">✓ on devnet</td><td class="dim">12/12 anchor tests, spec-conformant</td></tr>
+        <tr><td>Atomic on-chain payment-binding (Receipt PDAs)</td><td class="ok">✓ <span class="bold">shipped v0.1.1</span></td><td class="dim">Was v0.2 — shipped early, mid-flight</td></tr>
         <tr><td>npm publish (3 packages)</td><td class="ok">✓ live</td><td class="dim">Install <code>@next</code></td></tr>
         <tr><td>Mainnet on-chain</td><td class="pending">⏳ pending</td><td class="dim">Audit + multisig transition</td></tr>
-        <tr><td>Receipt-account variant (atomic on-chain payment-binding)</td><td class="pending">⏳ v0.2</td><td class="dim">Spec'd in cpi.md</td></tr>
       </tbody>
     </table>
   </section>
