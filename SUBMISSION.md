@@ -187,7 +187,7 @@ isn't claiming yet.
 - Reference caller programs published in source: oracle consumer, KYC-gated mint, vault signal consumer (per `cpi.md` §5)
 
 **v0.2 — weeks**
-- **Receipt-account variant** — restores atomic on-chain payment-binding. Single most important deliverable.
+- ~~**Receipt-account variant**~~ — **shipped early as v0.1.1.** On-chain Receipt PDAs (3 new instructions: `pay_with_receipt`, `verify_paid_result_with_receipt`, `claim_receipt`) deployed to devnet; 12/12 anchor tests passing. Atomic on-chain payment-binding now enforced.
 - **`pay_via_cpi`** — PDA-callable Pay for program-controlled token accounts
 - IETF working-group submission of Solana settlement-method registration (gets MPP.sol cited in the spec authors' references)
 
