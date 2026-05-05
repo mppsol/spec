@@ -51,8 +51,43 @@ This repo (`mppsol/spec`) holds the specification. Reference implementations:
 
 ## Status
 
-Specification stage. v0.1 freeze and reference implementations targeted Q3 2026.
-RFC-style. Breaking changes expected before v1.
+**v0.1 draft. Spec frozen for v0.1; reference implementations vary in
+maturity.** Breaking changes possible before v1.0.
+
+### Specs
+
+| Document | Status |
+| --- | --- |
+| [`wire.md`](spec/wire.md) — HTTP header format | ✅ v0.1 |
+| [`session.md`](spec/session.md) — on-chain session program | ✅ v0.1 |
+| [`cpi.md`](spec/cpi.md) — CPI primitive | ✅ v0.1 |
+| [`settlement.md`](spec/settlement.md) — operator guidance | ✅ v0.1 |
+| [`security.md`](spec/security.md) — threat model | ✅ v0.1 |
+
+### Reference implementations
+
+| Spec | TS | Rust | Buildable | Deployed |
+| --- | --- | --- | --- | --- |
+| `wire.md` | ✅ [`@mppsol/core`](https://www.npmjs.com/package/@mppsol/core) | n/a | ✅ | ✅ npm |
+| `session.md` | ✅ off-chain (server + agent) | ⚠️ Open/Topup/Revoke full; Settle/Close stubs | ❌ blocked | ❌ |
+| `cpi.md` | n/a (caller programs are Rust) | ⚠️ Pay full; rest stubs | ❌ blocked | ❌ |
+| `settlement.md` | n/a (advisory) | n/a | n/a | n/a |
+| `security.md` | n/a (advisory) | n/a | n/a | n/a |
+
+### What you can do today
+
+- ✅ **`solana-direct` mode (one-shot HTTP 402 payment) is shippable.**
+  Pay an MPP-priced API on Solana mainnet using
+  [`@mppsol/server`](https://www.npmjs.com/package/@mppsol/server) +
+  [`@mppsol/agent`](https://www.npmjs.com/package/@mppsol/agent). No
+  on-chain program required.
+- ❌ **`solana-session` mode** requires `mppsol_session` to be deployed
+  on-chain. The off-chain code is implemented and tested, but the
+  on-chain anchor doesn't exist yet.
+- ❌ **CPI primitive** requires `mppsol_cpi` to be deployed. Not yet.
+
+The on-chain piece ([`mppsol/cpi`](https://github.com/mppsol/cpi)) is
+blocked on Solana platform-tools v1.49+ which has not shipped yet.
 
 ## Differentiation
 
