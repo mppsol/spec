@@ -174,7 +174,7 @@ isn't claiming yet.
 
 | Risk | Severity (v0.1) | Mitigation path |
 | --- | --- | --- |
-| **Off-chain payment-binding** — `VerifyPaidResult` only checks the Ed25519 server signature, not that Pay actually ran on-chain (Solana clears return data on every CPI boundary) | High for trust-minimized use cases | **v0.2 Receipt-account variant.** Specced in `cpi.md` §6. PDA keyed by `(payer, nonce)` with a `claimed` flag — persists across CPIs and tx boundaries. |
+| ~~**Off-chain payment-binding**~~ — `VerifyPaidResult` only checks the Ed25519 server signature, not that Pay actually ran on-chain | ~~High for trust-minimized use cases~~ **RESOLVED in v0.1.1** | **Shipped:** `pay_with_receipt` + `verify_paid_result_with_receipt` + `claim_receipt`. On-chain Receipt PDA (keyed by payer+nonce) persists across CPIs and tx boundaries. Atomic payment-binding now enforced. Devnet-deployed; 12/12 anchor tests passing. |
 | **Server griefing** — server can issue a nonce + accept payment + refuse to deliver or refuse to sign the result hash. No on-chain slashing. | Medium | v0.1 mitigation is reputational/legal only. **v0.3 candidate: staking + slashing economic layer.** Requires tokenomics + game-theory review before commit. |
 | **Privacy** — every session, recipient, amount, frequency is on-chain. Enterprise users leak usage patterns to competitors. | Medium for enterprise; low for consumer/agent flows | Out of scope for v0.1 (`security.md` §10). Composable with privacy infra (mixers, ZK rollups, Token-2022 confidential transfers when supported). |
 | **Mainnet not deployed** | Blocking for production claims | Audit (OtterSec / Asymmetric Research / Neodyme) → multisig transition of upgrade authority → mainnet. |
