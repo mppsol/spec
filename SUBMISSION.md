@@ -166,14 +166,39 @@ banking), Solana enterprise distribution (current SBI R3 role), and
 first-customer pull (mainnet vault operator who needs paid agent
 payments today).
 
+## Risks I'd flag if I were judging this
+
+Stating these proactively because the alternative is a judge spotting
+them unaided. v0.1 is shippable for what it claims; here's where it
+isn't claiming yet.
+
+| Risk | Severity (v0.1) | Mitigation path |
+| --- | --- | --- |
+| **Off-chain payment-binding** — `VerifyPaidResult` only checks the Ed25519 server signature, not that Pay actually ran on-chain (Solana clears return data on every CPI boundary) | High for trust-minimized use cases | **v0.2 Receipt-account variant.** Specced in `cpi.md` §6. PDA keyed by `(payer, nonce)` with a `claimed` flag — persists across CPIs and tx boundaries. |
+| **Server griefing** — server can issue a nonce + accept payment + refuse to deliver or refuse to sign the result hash. No on-chain slashing. | Medium | v0.1 mitigation is reputational/legal only. **v0.3 candidate: staking + slashing economic layer.** Requires tokenomics + game-theory review before commit. |
+| **Privacy** — every session, recipient, amount, frequency is on-chain. Enterprise users leak usage patterns to competitors. | Medium for enterprise; low for consumer/agent flows | Out of scope for v0.1 (`security.md` §10). Composable with privacy infra (mixers, ZK rollups, Token-2022 confidential transfers when supported). |
+| **Mainnet not deployed** | Blocking for production claims | Audit (OtterSec / Asymmetric Research / Neodyme) → multisig transition of upgrade authority → mainnet. |
+| **PDA-callable Pay missing** — programs invoking Pay via CPI from a PDA-controlled token account need a `pay_via_cpi` variant | Low (workaround via direct PDA seeds + transfer ix) | v0.2 ix. |
+
 ## Roadmap (post-hackathon)
 
-- Audit (OtterSec / Asymmetric Research / Neodyme)
-- v0.2: receipt-account variant for atomic on-chain payment-binding
-- v0.2: `pay_via_cpi` for PDA-callable payments
-- Mainnet deploy
+**v0.1.x — immediate (days)**
+- Mainnet audit prep + bug bounty program
+- Reference caller programs published in source: oracle consumer, KYC-gated mint, vault signal consumer (per `cpi.md` §5)
+
+**v0.2 — weeks**
+- **Receipt-account variant** — restores atomic on-chain payment-binding. Single most important deliverable.
+- **`pay_via_cpi`** — PDA-callable Pay for program-controlled token accounts
+- IETF working-group submission of Solana settlement-method registration (gets MPP.sol cited in the spec authors' references)
+
+**v0.3 — months**
+- **Economic incentive layer** — staking + slashing for server-griefing prevention. Requires tokenomics review.
+- Multi-debit `SettleViaSession` via CPI for high-throughput consumer programs
+- **Oracle/KYC partnership integrations** — lobbying Pyth, Switchboard, or a privacy-respecting KYC provider to adopt MPP.sol as their billing adapter. A spec without users is worthless; this is the GTM motion.
+
+**Mainnet** — gated on v0.2 + audit + multisig transition
 - Publish `@mppsol/cpi` IDL bindings to npm
-- Reference apps: oracle consumer, KYC-gated mint, vault signal consumer
+- Mainnet deploy with upgrade authority on a Squads multisig (or burn it)
 
 ---
 
