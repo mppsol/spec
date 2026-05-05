@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MPP.sol — Machine Payments Protocol for Solana</title>
+<meta name="description" content="MPP.sol brings Stripe + Tempo Labs' Machine Payments Protocol (HTTP 402) to Solana. Direct-mode shippable on mainnet today; session program live on devnet.">
+<meta property="og:title" content="MPP.sol — Machine Payments Protocol for Solana">
+<meta property="og:description" content="HTTP 402 + Solana USDC, with an on-chain CPI primitive nobody else has.">
+<meta property="og:url" content="https://mppsol.org">
+<style>
+:root {
+  --bg: #0a0a0c;
+  --bg-soft: #14141a;
+  --bg-card: #1a1a22;
+  --fg: #e8e8ee;
+  --fg-dim: #9da0ad;
+  --fg-faint: #6b6e7a;
+  --accent: #14F195;
+  --accent-2: #9945FF;
+  --border: #2a2a36;
+  --code-bg: #0f0f14;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Inter", Helvetica, Arial, sans-serif;
+  font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased; }
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .15s; }
+a:hover { border-bottom-color: var(--accent); }
+code, pre { font-family: "SF Mono", Menlo, Consolas, monospace; }
+code { background: var(--code-bg); padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
+pre { background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px; padding: 14px 18px; overflow-x: auto; font-size: 0.88em; line-height: 1.5; }
+pre code { background: none; padding: 0; }
+.container { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+.hero { padding: 64px 0 48px; border-bottom: 1px solid var(--border); }
+.brand { font-size: 0.84em; color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+h1 { font-size: clamp(2.4rem, 6vw, 3.6rem); font-weight: 700; margin: 0 0 16px; letter-spacing: -0.02em; line-height: 1.05; }
+.tag { font-size: 1.25rem; color: var(--fg-dim); margin: 0 0 24px; max-width: 640px; }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+.btn { display: inline-block; padding: 10px 16px; border-radius: 6px; font-size: 0.95rem; font-weight: 500; transition: transform .1s, background .15s; border-bottom: none; }
+.btn:hover { transform: translateY(-1px); border-bottom: none; }
+.btn-primary { background: var(--accent); color: #0a0a0c; }
+.btn-primary:hover { background: #1ffaa0; }
+.btn-secondary { background: var(--bg-soft); color: var(--fg); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--bg-card); }
+.badges { margin-top: 24px; display: flex; gap: 16px; font-size: 0.85em; color: var(--fg-dim); flex-wrap: wrap; }
+.badges span::before { content: "✓ "; color: var(--accent); }
+section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+section:last-child { border-bottom: none; }
+h2 { font-size: 1.6rem; font-weight: 600; margin: 0 0 20px; letter-spacing: -0.01em; }
+h3 { font-size: 1.1rem; font-weight: 600; margin: 24px 0 10px; color: var(--fg); }
+p { margin: 0 0 14px; color: var(--fg-dim); }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-top: 24px; }
+.card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+.card h3 { margin-top: 0; }
+.card p { font-size: 0.95em; }
+.kbd { font-family: "SF Mono", Menlo, monospace; font-size: 0.78em; background: var(--bg-soft); padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border); color: var(--fg-dim); }
+.status-table { width: 100%; border-collapse: collapse; font-size: 0.92em; margin-top: 14px; }
+.status-table th, .status-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.status-table th { color: var(--fg-faint); font-weight: 500; font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.08em; }
+.status-table .ok { color: var(--accent); }
+.status-table .pending { color: #FFB800; }
+.status-table code { font-size: 0.85em; }
+.tag-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; background: var(--bg-soft); color: var(--fg-dim); border: 1px solid var(--border); margin-right: 4px; }
+footer { padding: 40px 0; color: var(--fg-faint); font-size: 0.88em; text-align: center; }
+footer a { color: var(--fg-dim); }
+.ascii { font-family: "SF Mono", Menlo, monospace; white-space: pre; font-size: 0.78em; line-height: 1.4; color: var(--fg-dim); padding: 20px; background: var(--code-bg); border-radius: 6px; border: 1px solid var(--border); overflow-x: auto; margin-top: 14px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<header class="hero">
+  <div class="brand">MPP.sol</div>
+  <h1>Machine Payments Protocol<br>for Solana</h1>
+  <p class="tag">
+    Stripe + Tempo Labs' IETF-draft HTTP <code>402 Payment Required</code>
+    standard, settled in Solana USDC. <strong>Direct-mode shippable on mainnet today.</strong>
+    On-chain session program + CPI primitive live on devnet.
+  </p>
+  <div class="cta">
+    <a class="btn btn-primary" href="#quickstart">Quickstart</a>
+    <a class="btn btn-secondary" href="https://github.com/mppsol">GitHub</a>
+    <a class="btn btn-secondary" href="https://www.npmjs.com/package/@mppsol/server">npm</a>
+    <a class="btn btn-secondary" href="spec/wire.md">Spec</a>
+  </div>
+  <div class="badges">
+    <span>108 tests passing</span>
+    <span>3 Solana programs deployed on devnet</span>
+    <span>Apache-2.0</span>
+  </div>
+</header>
+
+<section id="why">
+<h2>Why MPP.sol exists</h2>
+<p>
+  Stripe and Tempo Labs co-authored the Machine Payments Protocol — an
+  IETF-draft formalization of HTTP <code>402</code> for machine-to-machine
+  payments. Production settlement methods today: Tempo (their EVM L1),
+  Stripe cards, Lightning. <strong>Not Solana.</strong>
+</p>
+<p>
+  Solana is the highest-throughput L1 with deep USDC liquidity, sub-cent
+  fees, and the largest deployed base of agents and on-chain automation.
+  MPP.sol adds Solana as a settlement adapter — and adds something no
+  other MPP adapter has: a <strong>CPI primitive</strong> that lets one
+  Solana program atomically pay for and consume an off-chain MPP-priced
+  resource via cross-program invocation.
+</p>
+<p>
+  EVM-based MPP adapters can't match the CPI primitive — Solana's
+  atomic multi-instruction transaction model and Ed25519 precompile
+  pattern make off-chain-signed message verification cheap on-chain in
+  ways EVM doesn't.
+</p>
+</section>
+
+<section id="architecture">
+<h2>Architecture</h2>
+<div class="ascii">                              client
+                                │
+                                ▼
+                          ┌─────────────┐
+                          │   server    │  Hono / FastAPI middleware
+                          │  402 ──────►│  emits Solana payment challenge
+                          └─────────────┘
+                                │
+              client builds + signs Solana tx
+              (USDC transfer + Memo nonce binding)
+                                │
+                                ▼
+                          ┌─────────────┐
+                          │   Solana    │  optional on-chain composition:
+                          │ mppsol_*    │  mppsol_session escrow + debits,
+                          │  programs   │  mppsol_cpi for atomic
+                          └─────────────┘  pay-and-consume in other programs</div>
+
+<div class="grid-2" style="margin-top: 32px;">
+  <div class="card">
+    <h3>solana-direct (one-shot)</h3>
+    <p>Each request gets a fresh Solana tx: USDC transfer to the server's
+    token account + Memo with the server's nonce. <strong>No on-chain program
+    required.</strong> Mainnet-shippable today.</p>
+  </div>
+  <div class="card">
+    <h3>solana-session (streaming)</h3>
+    <p>Open a session PDA on-chain with escrowed USDC + an authorized signer
+    key. Sign 104-byte off-chain debits per request; server batches and
+    settles on-chain. Sub-cent per-request marginal cost.</p>
+  </div>
+  <div class="card">
+    <h3>CPI primitive</h3>
+    <p>Other Solana programs CPI into <code>mppsol_cpi</code> to pay for
+    off-chain resources atomically. The novel piece — EVM MPP adapters
+    can't do this.</p>
+  </div>
+  <div class="card">
+    <h3>Spec-conformant</h3>
+    <p>Implements the IETF-draft wire format faithfully. Will upstream a
+    Solana settlement-method registration once the spec stabilizes.</p>
+  </div>
+</div>
+</section>
+
+<section id="quickstart">
+<h2>Quickstart — pay your first 402 in ~60 seconds</h2>
+<p>Spin up a paid endpoint, then pay it. Both halves use a real Solana devnet payment in USDC.</p>
+
+<h3>1. Run the server (terminal 1)</h3>
+<pre><code>git clone https://github.com/mppsol/server
+cd server
+npm install hono @hono/node-server
+export MPPSOL_RECIPIENT=&lt;your-devnet-USDC-token-account&gt;
+bun run examples/hono.ts
+# Listening on http://localhost:3000</code></pre>
+
+<h3>2. Pay it (terminal 2)</h3>
+<pre><code>git clone https://github.com/mppsol/agent
+cd agent
+npm install @solana/web3.js @solana/spl-token bs58
+export MY_USDC_ATA=&lt;your-devnet-USDC-token-account&gt;
+bun run examples/pay-direct.ts
+# → Status: 200
+# → Body: Why don't scientists trust atoms? Because they make up everything.
+# → Receipt: Payment scheme="solana-direct", tx="...", slot="..."</code></pre>
+
+<h3>3. (optional) Try session mode</h3>
+<pre><code># Open a session PDA on devnet with 1 USDC escrowed
+git clone https://github.com/mppsol/cpi
+cd cpi && export MPP_SERVER_PUBKEY=&lt;server-wallet&gt;
+bun run examples/open-session.ts
+
+# Then pay against it from the agent
+cd ../agent
+export MPPSOL_SESSION=&lt;from-above&gt;
+export SIGNER=../cpi/authorized-signer.json
+bun run examples/pay-session.ts</code></pre>
+</section>
+
+<section id="repos">
+<h2>Components</h2>
+<table class="status-table">
+  <thead>
+    <tr><th>Package</th><th>What it is</th><th>Status</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><a href="https://github.com/mppsol/spec"><code>@mppsol/spec</code></a></td>
+      <td>RFC-style spec (5 docs)</td>
+      <td class="ok">v0.1 frozen</td>
+    </tr>
+    <tr>
+      <td><a href="https://www.npmjs.com/package/@mppsol/core"><code>@mppsol/core</code></a></td>
+      <td>Shared types + canonical encodings</td>
+      <td class="ok">on npm</td>
+    </tr>
+    <tr>
+      <td><a href="https://www.npmjs.com/package/@mppsol/server"><code>@mppsol/server</code></a></td>
+      <td>HTTP middleware (Hono adapter)</td>
+      <td class="ok">on npm — direct mode mainnet-ready</td>
+    </tr>
+    <tr>
+      <td><a href="https://www.npmjs.com/package/@mppsol/agent"><code>@mppsol/agent</code></a></td>
+      <td>Client SDK (<code>mppFetch</code>)</td>
+      <td class="ok">on npm</td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/mppsol/cpi"><code>@mppsol/cpi</code></a></td>
+      <td>Two on-chain Anchor programs</td>
+      <td class="ok">deployed devnet</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section id="onchain">
+<h2>On-chain (Solana devnet)</h2>
+<table class="status-table">
+  <thead>
+    <tr><th>Program</th><th>ID</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>mppsol_session</code></td>
+      <td><a href="https://explorer.solana.com/address/B7joeuXqPJSCTfUfMacHaWL6eseoDinV7Jxt52gVdfbi?cluster=devnet"><code>B7joeuXq...VdfbI</code></a></td>
+    </tr>
+    <tr>
+      <td><code>mppsol_cpi</code></td>
+      <td><a href="https://explorer.solana.com/address/624xoctSeGzq1TAVwZU1xbM9RozAd3xZmjPeFXrAY14j?cluster=devnet"><code>624xocts...AY14j</code></a></td>
+    </tr>
+    <tr>
+      <td><code>test_consumer</code> <span class="tag-pill">test-only</span></td>
+      <td><a href="https://explorer.solana.com/address/65ndFCiYYM3tznTg5Te1x8ALfVP7SxFEwvvUeANYy3Ex?cluster=devnet"><code>65ndFCiY...y3Ex</code></a></td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<section id="status">
+<h2>v0.1 readiness — honest scorecard</h2>
+<table class="status-table">
+  <thead>
+    <tr><th>Capability</th><th>Status</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>HTTP 402 wire protocol</td><td class="ok">✓ shipped</td><td>104-byte canonical debit, parser/serializer, 37 core tests</td></tr>
+    <tr><td>Direct mode (one-shot payments)</td><td class="ok">✓ mainnet-ready</td><td>40 server tests covering 8 error codes</td></tr>
+    <tr><td>Session program (Open/Topup/Revoke/Settle/Close)</td><td class="ok">✓ on devnet</td><td>11 anchor tests; full Ed25519 settle path</td></tr>
+    <tr><td>CPI primitive (Pay/SettleViaSession/VerifyPaidResult/GetReceipt)</td><td class="ok">✓ on devnet</td><td>v0.1 simplification: see spec §4.3</td></tr>
+    <tr><td>npm publish (3 packages)</td><td class="ok">✓ live</td><td>Install with <code>@next</code> tag</td></tr>
+    <tr><td>GitHub Actions CI</td><td class="ok">✓ green</td><td>Node 20 + 22 matrix on all TS repos</td></tr>
+    <tr><td>Mainnet on-chain deployment</td><td class="pending">⏳ pending</td><td>Audit required first; v0.2 receipt-account variant for stronger atomicity</td></tr>
+  </tbody>
+</table>
+</section>
+
+<section id="links">
+<h2>Spec docs</h2>
+<div class="grid-2">
+  <a class="card" href="spec/wire.md"><h3>wire.md</h3><p>HTTP header format, both settlement schemes, Ed25519 signing.</p></a>
+  <a class="card" href="spec/session.md"><h3>session.md</h3><p>On-chain session program: PDA layout, instruction set, lifecycle.</p></a>
+  <a class="card" href="spec/cpi.md"><h3>cpi.md</h3><p>CPI primitive design + v0.1 implementation notes.</p></a>
+  <a class="card" href="spec/settlement.md"><h3>settlement.md</h3><p>Operator guidance: confirmation levels, batching, Token-2022.</p></a>
+  <a class="card" href="spec/security.md"><h3>security.md</h3><p>Threat model, replay protection, cluster confusion attacks.</p></a>
+</div>
+</section>
+
+<footer>
+  <p>
+    Maintained by <a href="https://github.com/psyto">psyto</a> ·
+    Apache-2.0 ·
+    <a href="https://github.com/mppsol">github.com/mppsol</a>
+  </p>
+</footer>
+
+</div>
+</body>
+</html>
