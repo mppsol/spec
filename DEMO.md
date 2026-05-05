@@ -114,7 +114,7 @@ Target: 2:30 – 3:00 minutes. Show, don't tell.
 | **1:15 – 1:40** | Switch to session mode: open-session.ts, then pay-session.ts running multiple times rapidly | "For high-frequency calls, sessions: open once on-chain with escrowed USDC, then sign 104-byte off-chain debits per request. ~5ms each. Server batches and settles." |
 | **1:40 – 2:10** | Anchor test suite running, passing 11/11 | "On-chain programs deployed to devnet, fully tested. Open, Topup, Revoke, Settle, Close, plus a CPI primitive." |
 | **2:10 – 2:30** | spec/cpi.md scrolling, then composition pattern code | "The CPI primitive is the differentiator. Other Solana programs can CPI into mppsol_cpi to atomically pay for and consume off-chain resources — oracle prices, KYC attestations, signal feeds. EVM MPP adapters can't do this." |
-| **2:30 – 2:50** | mppsol.org status section | "v0.1 status: direct mode mainnet-shippable today, session program live on devnet, mainnet pending audit. 108 tests passing across 5 packages. Apache-2.0." |
+| **2:30 – 2:50** | mppsol.org status section | "v0.1 status: direct mode mainnet-shippable today, session program + 12 on-chain instructions live on devnet — including atomic on-chain payment-binding shipped as v0.1.1. Mainnet pending audit. 109 tests passing across 5 packages. Apache-2.0." |
 | **2:50 – 3:00** | github.com/mppsol page | "github.com/mppsol. Built solo. Looking for collaborators." |
 
 ### Recording tips
@@ -140,11 +140,13 @@ Target: 2:30 – 3:00 minutes. Show, don't tell.
 - "On-chain session program with Ed25519 batched settle, deployed to devnet" — true.
 - "First Solana MPP adapter with a CPI primitive" — true (sendaifun's
   experimental adapter is HTTP-only).
-- "108 tests passing" — true.
+- "109 tests passing" — true (97 vitest + 12 anchor).
+- "Atomic on-chain payment-binding shipped" — true; Receipt PDAs deployed to devnet as v0.1.1.
 
 ## What you should NOT claim
 
-- "Production-ready on mainnet" — needs audit + the v0.2 receipt-account
-  variant for atomic on-chain payment-binding.
+- "Production-ready on mainnet" — needs audit + multisig transition of
+  upgrade authority. (Atomic on-chain payment-binding is now shipped in
+  v0.1.1; the v0.2 deferment claim is no longer accurate.)
 - "Stripe-blessed" — we follow the IETF draft; no formal partnership.
 - "Faster than Tempo" — different design points; Tempo has a payments-focused L1.

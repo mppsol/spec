@@ -63,7 +63,8 @@ The first draft of `cpi.md` had `VerifyPaidResult` reading return data
 across CPIs. Solana clears return data at every program invocation
 boundary, so it doesn't work. We discovered this during integration
 testing and **honestly updated the spec** to call out the v0.1
-simplification + lay out the v0.2 receipt-account variant that fixes it.
+simplification + lay out the receipt-account variant that fixes it
+(originally v0.2; shipped early as v0.1.1 — see Risks section below).
 
 ## Run the demo (~60 seconds)
 
