@@ -132,9 +132,39 @@ itself (no marketing hand-wave).
 
 ## Team
 
-- **psyto** ([@psyto](https://github.com/psyto)) — sole maintainer of
-  this v0.1 release. Background: Solana / payments / AI agents
-  infrastructure.
+**Hiroyuki Saito** ([@psyto](https://github.com/psyto)) — solo founder,
+Tokyo.
+
+- **15+ years shipping mission-critical retail banking** at Shinsei
+  Bank (now SBI Shinsei): neo-bank ATM flows + Zengin payment
+  integration for APLUS BANKIT, fully-online mortgage onboarding
+  (incl. KSC/JICC credit-bureau integration), housing & card loans,
+  T+1 streaming pipelines (Oracle → AWS Aurora), DIC reporting,
+  FATCA/KYC, core-banking upgrades with **zero-downtime
+  requirements**. Flexcube core-banking expertise.
+- **Currently Head of Sales Engineering at SBI R3 Japan** (Apr 2023 –
+  present): driving Solana adoption across Japanese financial
+  institutions, with a focus on real-world asset (RWA) tokenization
+  via composable Solana protocols.
+- **3rd Place — Solana Cypherpunk Hackathon** (NTT Docomo R&D side
+  track). Recent shipping cadence proven on Solana.
+- **Active operator on Solana mainnet**: runs Yogi (funding-rate vault
+  on Drift) and Kodiak (funding-rate vault on Hyperliquid). One of the
+  first customers for the agent-payment infrastructure MPP.sol
+  standardizes — uses paid off-chain signal feeds + oracle data daily.
+- **Web3 stack**: Solana, Bitcoin, Ethereum, Hyperliquid, Corda
+  (enterprise blockchain).
+- **Global execution background**: Japan (15+ yrs), Hong Kong (2 yrs
+  startup), India (2 yrs offshore engineering at iGate / now
+  Capgemini).
+- **Credentials**: AWS Solutions Architect Associate; Salesforce
+  Platform Developer I; MSc candidate, Data Science, HSE University.
+
+The combination matters for MPP.sol specifically: payments
+infrastructure under regulatory + uptime pressure (15 yrs in core
+banking), Solana enterprise distribution (current SBI R3 role), and
+first-customer pull (mainnet vault operator who needs paid agent
+payments today).
 
 ## Roadmap (post-hackathon)
 
