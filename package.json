@@ -1,0 +1,49 @@
+{
+  "name": "@mppsol/spec",
+  "version": "0.1.0-draft.1",
+  "description": "MPP.sol — Machine Payments Protocol for Solana. Specification.",
+  "type": "module",
+  "main": "./index.mjs",
+  "exports": {
+    ".": "./index.mjs",
+    "./wire": "./spec/wire.md",
+    "./session": "./spec/session.md",
+    "./cpi": "./spec/cpi.md",
+    "./settlement": "./spec/settlement.md",
+    "./security": "./spec/security.md"
+  },
+  "files": [
+    "spec/",
+    "index.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "mpp",
+    "machine-payments-protocol",
+    "solana",
+    "payments",
+    "stablecoin",
+    "usdc",
+    "402",
+    "agents",
+    "x402",
+    "spl-token"
+  ],
+  "homepage": "https://github.com/mppsol/spec#readme",
+  "bugs": {
+    "url": "https://github.com/mppsol/spec/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mppsol/spec.git"
+  },
+  "author": "psyto <saito.hiroyuki@gmail.com> (https://github.com/psyto)",
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
