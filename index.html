@@ -267,7 +267,8 @@ bun run examples/pay-session.ts</code></pre>
     <tr><td>HTTP 402 wire protocol</td><td class="ok">✓ shipped</td><td>104-byte canonical debit, parser/serializer, 37 core tests</td></tr>
     <tr><td>Direct mode (one-shot payments)</td><td class="ok">✓ mainnet-ready</td><td>40 server tests covering 8 error codes</td></tr>
     <tr><td>Session program (Open/Topup/Revoke/Settle/Close)</td><td class="ok">✓ on devnet</td><td>11 anchor tests; full Ed25519 settle path</td></tr>
-    <tr><td>CPI primitive (Pay/SettleViaSession/VerifyPaidResult/GetReceipt)</td><td class="ok">✓ on devnet</td><td>v0.1 simplification: see spec §4.3</td></tr>
+    <tr><td>CPI primitive (Pay/SettleViaSession/VerifyPaidResult/GetReceipt)</td><td class="ok">✓ on devnet</td><td>12 instructions live</td></tr>
+    <tr><td>Atomic on-chain payment-binding (Receipt PDAs — was v0.2)</td><td class="ok">✓ shipped v0.1.1</td><td><code>pay_with_receipt</code> · <code>verify_paid_result_with_receipt</code> · <code>claim_receipt</code></td></tr>
     <tr><td>npm publish (3 packages)</td><td class="ok">✓ live</td><td>Install with <code>@next</code> tag</td></tr>
     <tr><td>GitHub Actions CI</td><td class="ok">✓ green</td><td>Node 20 + 22 matrix on all TS repos</td></tr>
     <tr><td>Mainnet on-chain deployment</td><td class="pending">⏳ pending</td><td>Audit required first; v0.2 receipt-account variant for stronger atomicity</td></tr>

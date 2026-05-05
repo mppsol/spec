@@ -24,20 +24,27 @@ return data at the start of every program invocation — including CPIs
 — so a parent program that calls `Pay` then `VerifyPaidResult`
 back-to-back via CPI sees empty return data inside `VerifyPaidResult`.
 
-**v0.1 ships with a simplified `VerifyPaidResult`** that only checks
-the Ed25519 server-signature on the canonical result message. The
-on-chain payment-binding guarantee in v0.1 is replaced by an off-chain
-nonce-management guarantee: servers only sign result hashes for nonces
-they issued challenges for, so possession of a valid `(nonce,
-signed_result)` pair implies payment was made off-chain.
+**Two callable paths in the deployed implementation:**
 
-**v0.2 will restore on-chain payment-binding** by adding an optional
-Receipt account to `Pay` and `SettleViaSession` (rent-bearing,
-persistent across CPIs and tx boundaries) that `VerifyPaidResult` can
-look up by nonce. See §6 for the design.
+1. **Original v0.1 path** (free, same-call-stack only) —
+   `pay()` + `verify_paid_result()`. Verification is Ed25519-only;
+   payment-binding is enforced off-chain via the nonce model (servers
+   only sign result hashes for nonces they issued challenges for).
+   Lower cost, suitable when the server is reasonably trusted.
 
-The Args, Accounts, and security sections below describe the v0.2
-design with `[v0.1: …]` callouts where the implementation differs.
+2. **v0.1.1 receipt-account path** ✅ **shipped during the hackathon** —
+   `pay_with_receipt()` + `verify_paid_result_with_receipt()` +
+   `claim_receipt()`. Pay writes a Receipt PDA at
+   `[RECEIPT_SEED, payer, nonce]` (~0.001 SOL rent). The Receipt
+   persists across CPIs **and tx boundaries**, so `VerifyPaidResult`
+   confirms payment-binding atomically with the Ed25519 verification.
+   `claim_receipt` reclaims rent after verification. **This is the
+   originally-v0.2 design, shipped early.** Devnet-deployed; 12/12
+   anchor tests passing.
+
+The Args, Accounts, and security sections below describe the original
+return-data design with `[v0.1: …]` callouts where the implementation
+differs. For the receipt-account path, see §6.
 
 ---
 
