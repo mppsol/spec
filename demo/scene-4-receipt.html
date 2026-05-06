@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MPP.sol — Scene 4: Receipt PDA (v0.1.1)</title>
+<style>
+:root {
+  --bg: #0a0a0c; --bg-soft: #14141a; --bg-card: #1a1a22;
+  --fg: #e8e8ee; --fg-dim: #9da0ad; --fg-faint: #6b6e7a;
+  --accent: #14F195; --accent-2: #9945FF; --orange: #FFB800;
+  --red: #ff6b6b; --border: #2a2a36;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg); color: var(--fg); width: 1280px; height: 800px;
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 16px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased; overflow: hidden;
+}
+.viewport { padding: 28px 44px; }
+.titlebar {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border);
+}
+.tdot { width: 12px; height: 12px; border-radius: 50%; }
+.tdot.r { background: #ff5f57; } .tdot.y { background: #ffbd2e; } .tdot.g { background: #28ca42; }
+.titletext { margin-left: 14px; color: var(--fg-dim); font-size: 0.92em; letter-spacing: 0.04em; }
+.titlebrand { color: var(--accent); font-weight: 600; }
+.titlesub { color: var(--fg-faint); margin-left: 10px; }
+.scenebadge {
+  margin-left: auto; font-size: 0.78em; color: var(--orange);
+  letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+}
+
+.term { font-size: 15.5px; line-height: 1.62; }
+.line { display: block; min-height: 1.62em; white-space: pre-wrap; word-break: break-word; }
+.line.cmd { color: var(--accent); }
+.line.cmd::before { content: "$ "; color: var(--fg-faint); }
+.line.comment { color: var(--fg-faint); }
+.line.comment::before { content: "# "; color: var(--fg-faint); }
+.line.arrow { color: var(--accent); }
+.line.arrow::before { content: "→ "; color: var(--accent); }
+.line.success { color: var(--accent); }
+.line.success::before { content: "✓ "; color: var(--accent); }
+.line.tree { color: var(--fg-dim); padding-left: 6ch; }
+.line.tree .arr { color: var(--accent-2); }
+.line.bracketed { color: var(--fg-dim); }
+.line.bracketed b { color: var(--orange); font-weight: 500; }
+.line.spacer { min-height: 0.55em; }
+.line.divider {
+  border-top: 1px dashed var(--border); margin: 10px 0 8px; padding-top: 8px;
+  color: var(--accent-2); font-size: 0.82em; text-transform: uppercase;
+  letter-spacing: 0.14em; min-height: auto;
+}
+.line.moat { color: var(--orange); font-weight: 600; }
+.line.moat::before { content: "▸ "; color: var(--orange); }
+.cursor {
+  display: inline-block; width: 0.5ch; height: 1.05em;
+  vertical-align: text-bottom; background: var(--accent);
+  margin-left: 2px; animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="viewport">
+  <div class="titlebar">
+    <span class="tdot r"></span><span class="tdot y"></span><span class="tdot g"></span>
+    <span class="titletext"><span class="titlebrand">mppsol_cpi</span><span class="titlesub">v0.1.1 · Receipt PDAs</span></span>
+    <span class="scenebadge">Scene 4 · v0.1.1 Ship</span>
+  </div>
+  <div id="term" class="term"></div>
+</div>
+<script>
+const LINES = [
+  { type: 'comment', text: 'v0.1.1 ships atomic on-chain payment-binding (was originally v0.2)' },
+  { type: 'comment', text: '3 new instructions: pay_with_receipt · verify_paid_result_with_receipt · claim_receipt' },
+  { type: 'spacer' },
+  { type: 'divider', text: 'STEP 1 — pay_with_receipt writes a Receipt PDA' },
+  { type: 'cmd', text: 'caller_program::pay_with_receipt({amount, nonce, request_hash})' },
+  { type: 'tree', text: '<span class="arr">└─CPI→</span> mppsol_cpi::pay_with_receipt' },
+  { type: 'success', text: 'Receipt PDA created at [b"receipt", payer, nonce]' },
+  { type: 'bracketed', text: '       fields: { discriminator: PAY1, nonce, request_hash,' },
+  { type: 'bracketed', text: '                 amount: 1_000, recipient, mint, slot, payer,' },
+  { type: 'bracketed', text: '                 created_at: 1714928xxx, claimed: false }' },
+  { type: 'success', text: 'persisted on-chain — survives CPI <b>and</b> tx boundaries' },
+  { type: 'spacer' },
+  { type: 'divider', text: 'STEP 2 — separate program reads it (different tx)' },
+  { type: 'cmd', text: 'another_program::do_thing(receipt_pda)' },
+  { type: 'tree', text: '<span class="arr">└─CPI→</span> mppsol_cpi::verify_paid_result_with_receipt' },
+  { type: 'success', text: 'Receipt PDA found · payer matches · amount matches · recipient matches' },
+  { type: 'success', text: 'atomic on-chain payment-binding enforced' },
+  { type: 'spacer' },
+  { type: 'divider', text: 'STEP 3 — payer reclaims rent when done' },
+  { type: 'cmd', text: 'payer.claim_receipt(receipt_pda)' },
+  { type: 'success', text: 'PDA closed · 0.00194 SOL rent returned to payer' },
+  { type: 'spacer' },
+  { type: 'arrow', text: 'shipped mid-hackathon · was originally v0.2' },
+  { type: 'moat', text: 'EVM has no equivalent — return data is per-call only, no PDA model' },
+];
+
+const term = document.getElementById('term');
+const PER_LINE = 600;
+const CHAR_DELAY = 10;
+
+async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function typeLine(line) {
+  const el = document.createElement('span');
+  el.className = `line ${line.type}`;
+  term.appendChild(el);
+  if (line.type === 'spacer' || line.type === 'divider') {
+    if (line.text) el.innerHTML = line.text;
+    return;
+  }
+  const text = line.text;
+  let isTag = false, buffer = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '<') isTag = true;
+    buffer += ch;
+    if (ch === '>') { isTag = false; el.innerHTML = buffer; continue; }
+    if (!isTag) {
+      el.innerHTML = buffer;
+      await sleep(CHAR_DELAY);
+    }
+  }
+}
+
+window.startScene = async () => {
+  for (const line of LINES) {
+    await typeLine(line);
+    await sleep(PER_LINE - (line.text?.length || 0) * CHAR_DELAY);
+  }
+  const cur = document.createElement('span');
+  cur.className = 'cursor';
+  term.appendChild(cur);
+  await sleep(3500);
+  window.__sceneDone = true;
+};
+</script>
+</body>
+</html>

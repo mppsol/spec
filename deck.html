@@ -163,6 +163,40 @@ table.t code { font-size: 0.88em; }
   section.slide { padding: 5vh 6vw; }
   .split { grid-template-columns: 1fr; }
 }
+
+/* Speaker notes — inline <aside> is always hidden; the #notes-panel
+   below renders the current slide's notes when toggled with N. */
+.notes { display: none !important; }
+
+#notes-panel {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 38vh;
+  background: rgba(15,15,20,0.97);
+  border-top: 1px solid var(--border);
+  padding: 16px 36px 20px;
+  overflow-y: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Inter", Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  color: var(--fg);
+  z-index: 100;
+  display: none;
+  backdrop-filter: blur(8px);
+}
+body.notes-on #notes-panel { display: block; }
+body.notes-on section.slide { padding-bottom: 42vh; padding-top: 3vh; justify-content: flex-start; }
+body.notes-on #brand, body.notes-on #hud { bottom: calc(38vh + 12px); }
+
+#notes-panel .label {
+  font-size: 0.78em; color: var(--accent); letter-spacing: 0.15em;
+  text-transform: uppercase; margin-bottom: 8px; font-weight: 600;
+}
+#notes-panel .content { color: var(--fg); }
+#notes-panel .content strong { color: var(--accent); }
+#notes-panel .content em { color: var(--accent-2); font-style: normal; }
+#notes-panel p { margin: 0 0 8px 0; color: var(--fg); font-size: clamp(0.95rem, 1.15vw, 1.1rem); }
+#notes-panel p:last-child { margin-bottom: 0; }
+#notes-panel .timing { color: var(--orange); font-size: 0.85em; margin-bottom: 10px; }
 </style>
 </head>
 <body>
@@ -178,6 +212,12 @@ table.t code { font-size: 0.88em; }
       shipped on Solana. <span class="bold">Direct mode mainnet-ready today.</span>
     </p>
     <p class="subline">Hiroyuki Saito · Tokyo · github.com/mppsol · mppsol.org</p>
+    <aside class="notes">
+      <div class="timing">⏱ 0:00–0:15</div>
+      <div class="content">
+        <p>Hi, I'm <strong>Hiro</strong>. I built <strong>MPP.sol</strong> — Stripe and Tempo Labs' HTTP <strong>402</strong> machine-payments standard, shipped on Solana. <strong>Direct mode is mainnet-ready today.</strong></p>
+      </div>
+    </aside>
   </section>
 
   <!-- 2: The market that just launched -->
@@ -191,6 +231,14 @@ table.t code { font-size: 0.88em; }
       <li><span class="bold">Meta</span> already routes USDC payments through Solana via Stripe</li>
     </ul>
     <p class="subline">MPP = HTTP 402 challenge → client pays → 200 OK + cryptographic receipt.</p>
+    <aside class="notes">
+      <div class="timing">⏱ 0:15–0:40</div>
+      <div class="content">
+        <p>Two months ago, Stripe and Tempo Labs launched <strong>MPP — Machine Payments Protocol</strong> — the IETF-draft standard for HTTP 402 machine payments.</p>
+        <p>Tempo's L1 hit mainnet in March with over a hundred services in its payments directory. <strong>Visa</strong> contributed the cards spec. <strong>Cloudflare</strong> ships MPP in their Agents framework. And <strong>Meta</strong> already routes USDC payments through Solana via Stripe.</p>
+        <p>The standard is real. It's live. It's how machines will pay machines.</p>
+      </div>
+    </aside>
   </section>
 
   <!-- 3: The gap -->
@@ -214,6 +262,14 @@ table.t code { font-size: 0.88em; }
         <div class="sub">Vertically integrated — devs don't get an open standard</div>
       </div>
     </div>
+    <aside class="notes">
+      <div class="timing">⏱ 0:40–1:05</div>
+      <div class="content">
+        <p>But there's a gap. <strong>Solana — the chain Meta actually settles on — has no MPP adapter.</strong></p>
+        <p>Tempo is a captive EVM L1; it cannot compose with Solana DeFi or with Solana-USDC agents. Sendaifun's solana-mpp is experimental — HTTP-only, in-memory storage, no CPI primitive. Stripe Crypto and Coinbase are closed vertical stacks — developers don't get an open standard.</p>
+        <p>Solana developers don't have an open MPP adapter to build on. That's the gap MPP.sol fills.</p>
+      </div>
+    </aside>
   </section>
 
   <!-- 4: What I built -->
@@ -230,6 +286,14 @@ table.t code { font-size: 0.88em; }
         <tr><td><code>mppsol/cpi</code></td><td>2 Anchor programs deployed</td><td class="ok">Solana devnet</td></tr>
       </tbody>
     </table>
+    <aside class="notes">
+      <div class="timing">⏱ 1:05–1:35</div>
+      <div class="content">
+        <p>Here's what I shipped in five weeks, solo.</p>
+        <p><strong>Five repos.</strong> An RFC-style spec — five documents — at mppsol.org. Three TypeScript packages live on npm: shared types and canonical encodings, an HTTP middleware with a Hono adapter, and a client SDK with a single <code class="inline">mppFetch</code> call.</p>
+        <p>And on the Solana side, <strong>two Anchor programs deployed to devnet</strong>. All Apache-2.0.</p>
+      </div>
+    </aside>
   </section>
 
   <!-- 5: The moat -->
@@ -251,6 +315,15 @@ shipped v0.1.1.
 
 Why EVM can't: no atomic multi-instruction tx model + no
 Ed25519 precompile pattern for cheap on-chain verification.</div>
+    <aside class="notes">
+      <div class="timing">⏱ 1:35–2:10</div>
+      <div class="content">
+        <p>This is the part no other MPP adapter has — and the part EVM cannot match. <strong>A CPI primitive.</strong></p>
+        <p>Any Solana program can cross-program-invoke into <code class="inline">mppsol_cpi</code> to atomically pay for and consume off-chain resources — oracle prices, KYC attestations, signal feeds — inside a single transaction.</p>
+        <p>I shipped <strong>Receipt PDAs as v0.1.1</strong>, mid-hackathon. That gives true atomic on-chain payment-binding that persists across CPIs and transaction boundaries.</p>
+        <p><strong>EVM structurally cannot match this.</strong> No atomic multi-instruction transaction model, no Ed25519 precompile pattern for cheap on-chain verification.</p>
+      </div>
+    </aside>
   </section>
 
   <!-- 6: Real on-chain proof -->
@@ -278,6 +351,14 @@ Ed25519 precompile pattern for cheap on-chain verification.</div>
       explorer.solana.com/tx/<span class="accent">4ycgDjjD9AgM5qT51qwxjvnrerP2VFgP2tn8GFxvWD3tvYprE2jsyjQcQ3ZCjCjcaP34DXdYmKdcbjKAFh9Zf2qJ</span>?cluster=devnet
     </p>
     <p class="subline">Captured live in <span class="accent">demo/demo.mp4</span> via <code class="inline">@mppsol/server</code> + <code class="inline">@mppsol/agent</code>.</p>
+    <aside class="notes">
+      <div class="timing">⏱ 2:10–2:30</div>
+      <div class="content">
+        <p>This isn't slideware. <strong>A real devnet payment, finalized.</strong> Slot four-six-zero million. Verifiable right now on Solana Explorer.</p>
+        <p><strong>Seventeen thousand compute units. Eight-hundredths of a cent in fees.</strong> That's the unit economics of MPP on Solana.</p>
+        <p>Captured live in the demo video — the agent SDK and server middleware calling each other end-to-end and settling on Solana.</p>
+      </div>
+    </aside>
   </section>
 
   <!-- 7: Status / readiness -->
@@ -288,13 +369,21 @@ Ed25519 precompile pattern for cheap on-chain verification.</div>
       <tbody>
         <tr><td>HTTP 402 wire protocol</td><td class="ok">✓ shipped</td><td class="dim">37 vitest, parser/serializer</td></tr>
         <tr><td>Direct mode (one-shot)</td><td class="ok">✓ mainnet-ready</td><td class="dim">40 server tests, 8 error codes</td></tr>
-        <tr><td>Session program (Open/Settle/Topup/Revoke/Close)</td><td class="ok">✓ on devnet</td><td class="dim">11 anchor tests, full Ed25519</td></tr>
-        <tr><td>CPI primitive (12 instructions across 2 programs)</td><td class="ok">✓ on devnet</td><td class="dim">12/12 anchor tests, spec-conformant</td></tr>
+        <tr><td>Session program (Open/Settle/Topup/Revoke/Close)</td><td class="ok">✓ on devnet</td><td class="dim">Full Ed25519 batched settle path</td></tr>
+        <tr><td>CPI primitive (12 instructions across 2 programs)</td><td class="ok">✓ on devnet</td><td class="dim">12/12 anchor tests passing</td></tr>
         <tr><td>Atomic on-chain payment-binding (Receipt PDAs)</td><td class="ok">✓ <span class="bold">shipped v0.1.1</span></td><td class="dim">Was v0.2 — shipped early, mid-flight</td></tr>
         <tr><td>npm publish (3 packages)</td><td class="ok">✓ live</td><td class="dim">Install <code>@next</code></td></tr>
         <tr><td>Mainnet on-chain</td><td class="pending">⏳ pending</td><td class="dim">Audit + multisig transition</td></tr>
       </tbody>
     </table>
+    <aside class="notes">
+      <div class="timing">⏱ 2:30–3:00</div>
+      <div class="content">
+        <p>Honest readiness scorecard.</p>
+        <p>HTTP 402 wire protocol — shipped, with thirty-seven parser tests. <strong>Direct mode is mainnet-ready</strong> — forty server tests, eight error codes. The session program is on devnet — open, settle, topup, revoke, close, with full Ed25519 batch verify. The CPI primitive — twelve instructions, twelve passing tests. <strong>Receipt PDAs shipped early as v0.1.1.</strong></p>
+        <p>The one yellow row: mainnet is pending audit and multisig transition of upgrade authority. <strong>That's the right gate, not a weakness.</strong></p>
+      </div>
+    </aside>
   </section>
 
   <!-- 8: Why me -->
@@ -308,6 +397,15 @@ Ed25519 precompile pattern for cheap on-chain verification.</div>
       <li><span class="bold">Mainnet operator</span> — Yogi (Drift) + Kodiak (Hyperliquid) funding-rate vaults. Pay for off-chain signals daily — first-customer for the problem MPP.sol solves</li>
       <li><span class="bold">Global execution</span> — Japan (15+ yrs), Hong Kong (2 yrs startup), India (2 yrs offshore engineering)</li>
     </ul>
+    <aside class="notes">
+      <div class="timing">⏱ 3:00–3:35</div>
+      <div class="content">
+        <p>Why I'm the right person to ship this.</p>
+        <p><strong>Fifteen years</strong> shipping mission-critical retail banking at Shinsei Bank — Zengin payments, FATCA-KYC, mortgage onboarding, Flexcube core, zero-downtime upgrades. I know what payment infrastructure looks like under regulatory and uptime pressure.</p>
+        <p>Today I'm <strong>Head of Sales Engineering at SBI R3 Japan</strong> — driving Solana adoption across Japanese financial institutions, especially real-world asset tokenization.</p>
+        <p>And I'm not just a builder. I run perp vaults on Drift and Hyperliquid mainnet. I pay for off-chain signals every day. <strong>I'm one of the agents this protocol serves.</strong></p>
+      </div>
+    </aside>
   </section>
 
   <!-- 9: Business -->
@@ -334,6 +432,14 @@ Ed25519 precompile pattern for cheap on-chain verification.</div>
       </div>
     </div>
     <p class="subline" style="margin-top: 18px;">Same model as Stripe (open standards, paid hosted infra) and Anchor Foundation.</p>
+    <aside class="notes">
+      <div class="timing">⏱ 3:35–4:00</div>
+      <div class="content">
+        <p>Business model. <strong>Open standard, paid hosted infrastructure</strong> — the same play Stripe ran.</p>
+        <p>The free side — spec, SDKs, on-chain programs, all Apache-2.0 — drives adoption and makes MPP.sol the canonical Solana reference.</p>
+        <p>Revenue comes from hosted infrastructure: <strong>nonce and session storage</strong> — multi-region, durable, observable; <strong>upgrade-authority custody</strong>; settlement-batching for high-volume servers; and premium SDK support for enterprise integrators. Plus a long-horizon foundation play through IETF spec stewardship.</p>
+      </div>
+    </aside>
   </section>
 
   <!-- 10: Ask -->
@@ -342,7 +448,7 @@ Ed25519 precompile pattern for cheap on-chain verification.</div>
     <h2>Apply for Colosseum accelerator.<br><span class="dim">Get to mainnet, audit, v0.2.</span></h2>
 
     <div class="big-stat">
-      <span class="num">108</span><span class="label">tests passing</span>
+      <span class="num">109</span><span class="label">tests passing</span>
     </div>
     <div class="big-stat">
       <span class="num">3</span><span class="label">programs deployed on Solana devnet</span>
@@ -356,14 +462,27 @@ Ed25519 precompile pattern for cheap on-chain verification.</div>
       <a class="pill" href="https://github.com/mppsol">github.com/mppsol</a>
       <a class="pill" href="https://www.npmjs.com/package/@mppsol/server">@mppsol on npm</a>
     </div>
+    <aside class="notes">
+      <div class="timing">⏱ 4:00–4:20</div>
+      <div class="content">
+        <p>The ask. <strong>Looking for Colosseum accelerator support</strong> — to get to mainnet, audit, and ecosystem development.</p>
+        <p>One hundred and nine tests passing. Three programs deployed on Solana devnet. Five repos. Three packages live on npm.</p>
+        <p><strong>mppsol.org. github.com/mppsol. Thank you.</strong></p>
+      </div>
+    </aside>
   </section>
 
 </main>
 
+<div id="notes-panel" aria-hidden="true">
+  <div class="timing"></div>
+  <div class="content"></div>
+</div>
+
 <div id="brand">MPP.SOL</div>
 <div id="hud">
   <span class="num-current">1</span><span class="sep"> / </span><span id="total">10</span>
-  <span class="hint">←/→ space · F fullscreen</span>
+  <span class="hint">←/→ space · N notes · F fullscreen</span>
 </div>
 
 <script>
@@ -372,6 +491,22 @@ const total = slides.length;
 let cur = 0;
 document.getElementById('total').textContent = total;
 const numEl = document.querySelector('#hud .num-current');
+const notesPanel = document.getElementById('notes-panel');
+const notesTiming = notesPanel.querySelector('.timing');
+const notesContent = notesPanel.querySelector('.content');
+
+function syncNotes() {
+  const aside = slides[cur].querySelector('aside.notes');
+  if (!aside) {
+    notesTiming.textContent = '';
+    notesContent.innerHTML = '<em style="color: var(--fg-faint);">No notes for this slide.</em>';
+    return;
+  }
+  const t = aside.querySelector('.timing');
+  const c = aside.querySelector('.content');
+  notesTiming.textContent = t ? t.textContent : '';
+  notesContent.innerHTML = c ? c.innerHTML : '';
+}
 
 function show(idx) {
   if (idx < 0 || idx >= total) return;
@@ -380,6 +515,11 @@ function show(idx) {
   slides[cur].classList.add('active');
   numEl.textContent = cur + 1;
   history.replaceState(null, '', '#' + (cur + 1));
+  syncNotes();
+}
+
+function toggleNotes() {
+  document.body.classList.toggle('notes-on');
 }
 
 function next() { show(Math.min(cur + 1, total - 1)); }
@@ -393,6 +533,8 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === 'f' || e.key === 'F') {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen();
+  } else if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault(); toggleNotes();
   } else if (/^[0-9]$/.test(e.key)) {
     const n = parseInt(e.key, 10);
     if (n >= 1 && n <= total) show(n - 1);
@@ -416,6 +558,7 @@ function applyHash() {
 }
 window.addEventListener('hashchange', applyHash);
 applyHash();
+syncNotes();
 </script>
 
 </body>

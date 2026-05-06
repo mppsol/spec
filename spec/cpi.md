@@ -203,15 +203,17 @@ struct VerifyPaidResultArgs {
 }
 ```
 
-**Accounts:** instructions sysvar, optionally a receipt account (when
-`Pay`/`SettleViaSession` persisted one in v0.2+).
+**Accounts:** instructions sysvar. (For atomic on-chain payment-binding,
+use the `verify_paid_result_with_receipt` variant shipped in v0.1.1,
+which additionally takes the Receipt PDA written by `pay_with_receipt`.)
 
 **Effects:**
 
-1. **[v0.2 only — not in v0.1]** Reads the optional receipt account (or
-   return data, where the runtime allows) to confirm a `Pay` or
-   `SettleViaSession` happened in this tx with the matching `nonce`,
-   `request_hash`, and recipient = `server_pubkey`'s token account.
+1. **[v0.1.1 with-receipt variant only]** Reads the Receipt PDA (keyed by
+   `payer + nonce`) to confirm a `pay_with_receipt` happened with the
+   matching `nonce`, `request_hash`, and recipient = `server_pubkey`'s
+   token account. The base `verify_paid_result` instruction skips this
+   step and relies on off-chain nonce-binding.
 2. Reads the instructions sysvar to confirm an Ed25519 precompile
    instruction in this tx verified `server_pubkey`'s signature over the
    canonical message `(nonce || request_hash || result_hash ||
@@ -225,13 +227,14 @@ This is the instruction caller programs CPI into when they want to be
 absolutely sure that (a) the payment was made and (b) the data they're
 about to use was signed by the server they paid.
 
-**[v0.1 caveat]** Step 1 is omitted in v0.1. Verification is Ed25519-only.
-The "did Pay happen" guarantee in v0.1 is enforced off-chain via the
-nonce model (servers only sign result hashes for nonces they issued
-challenges for). Caller programs that need on-chain atomic payment-binding
-should compose `Pay` and `VerifyPaidResult` in the same parent
-instruction so that any failure of `Pay` reverts the whole tx — but be
-aware that `VerifyPaidResult` itself does not assert `Pay` ran.
+**[v0.1 caveat — base instruction]** In the base `VerifyPaidResult`
+instruction, step 1 is omitted. Verification is Ed25519-only and the
+"did Pay happen" guarantee is enforced off-chain via the nonce model
+(servers only sign result hashes for nonces they issued challenges for).
+Caller programs that need on-chain atomic payment-binding should use
+`pay_with_receipt` + `verify_paid_result_with_receipt` (shipped in
+v0.1.1), which read the on-chain Receipt PDA and assert payment occurred
+in this tx.
 
 ### 4.4 `GetReceipt`
 
@@ -243,18 +246,20 @@ nonce exists at the moment of the call and re-emits it.
 and re-emits it via `set_return_data`. Reverts if no receipt is found
 or the nonce mismatches.
 
-**[v0.1 caveat]** Like `VerifyPaidResult`, this works only within a
-single program-invocation call stack; Solana's runtime clears return
-data on entry to each program. v0.2's receipt-account variant will
-make this useful across CPIs and tx boundaries.
+**[v0.1 caveat]** Like the base `VerifyPaidResult`, this works only
+within a single program-invocation call stack; Solana's runtime clears
+return data on entry to each program. For cross-CPI / cross-tx receipt
+lookups, use the v0.1.1 Receipt-PDA path (`pay_with_receipt` +
+`verify_paid_result_with_receipt`).
 
 ## 5. Composition patterns
 
-> **v0.1 note:** these patterns assume `VerifyPaidResult` enforces
-> on-chain payment-binding (§4.3 step 1). In v0.1 it does not — the
-> patterns still work but the `VerifyPaidResult` step only validates
-> the Ed25519 server signature. Atomic payment-binding waits for v0.2's
-> receipt-account variant.
+> **Note:** these patterns originally assumed `VerifyPaidResult`
+> enforces on-chain payment-binding (§4.3 step 1). The base instruction
+> does not — it only validates the Ed25519 server signature. For atomic
+> on-chain payment-binding, swap `Pay` → `pay_with_receipt` and
+> `VerifyPaidResult` → `verify_paid_result_with_receipt` (both shipped
+> in v0.1.1). The composition patterns below work with either pair.
 
 ### 5.1 Oracle consumer (perp DEX)
 
@@ -339,19 +344,20 @@ calling `simulateTransaction` can read it from the result), but it
 cannot be read by a subsequent `VerifyPaidResult` CPI within the same
 parent instruction.
 
-**v0.2 plan:** add an optional `receipt_account` parameter to `Pay` and
-`SettleViaSession`. When present, the program writes a PDA of
-`mppsol_cpi` keyed by `(payer, nonce)` that records the same fields as
-the return-data struct plus a `claimed` flag. `VerifyPaidResult` looks
-up this PDA by nonce to enforce atomic on-chain payment-binding. A
-`ClaimReceipt` instruction marks it consumed and closes it, returning
-rent to the payer.
+**v0.1.1 (shipped — was v0.2 plan):** `pay_with_receipt` writes a PDA
+of `mppsol_cpi` keyed by `(payer, nonce)` that records the same fields
+as the return-data struct plus `payer`, `created_at`, and a `claimed`
+flag. `verify_paid_result_with_receipt` looks up this PDA by nonce to
+enforce atomic on-chain payment-binding. `claim_receipt` marks it
+consumed and closes it, returning rent to the payer.
 
-**v0.1 recommendation:** for simple flows where the off-chain server
-controls nonce issuance (the common case), the v0.1 nonce-binding model
-is sufficient — possession of a server-signed result implies the server
-saw payment off-chain. For atomic on-chain payment-binding, wait for
-v0.2 and the receipt-account variant.
+**Recommendation:** for simple flows where the off-chain server controls
+nonce issuance (the common case), the base nonce-binding model
+(`Pay` + `VerifyPaidResult`) is sufficient — possession of a
+server-signed result implies the server saw payment off-chain. For
+atomic on-chain payment-binding (oracles consumed by other programs,
+KYC-gated mints, vault signal consumers), use the v0.1.1 Receipt-PDA
+variants.
 
 ## 7. Security
 

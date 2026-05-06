@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MPP.sol — Scene 5: Anchor Test 12/12</title>
+<style>
+:root {
+  --bg: #0a0a0c; --bg-soft: #14141a; --bg-card: #1a1a22;
+  --fg: #e8e8ee; --fg-dim: #9da0ad; --fg-faint: #6b6e7a;
+  --accent: #14F195; --accent-2: #9945FF; --orange: #FFB800;
+  --red: #ff6b6b; --border: #2a2a36;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg); color: var(--fg); width: 1280px; height: 800px;
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 16px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased; overflow: hidden;
+}
+.viewport { padding: 28px 44px; }
+.titlebar {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border);
+}
+.tdot { width: 12px; height: 12px; border-radius: 50%; }
+.tdot.r { background: #ff5f57; } .tdot.y { background: #ffbd2e; } .tdot.g { background: #28ca42; }
+.titletext { margin-left: 14px; color: var(--fg-dim); font-size: 0.92em; letter-spacing: 0.04em; }
+.titlebrand { color: var(--accent); font-weight: 600; }
+.titlesub { color: var(--fg-faint); margin-left: 10px; }
+.scenebadge {
+  margin-left: auto; font-size: 0.78em; color: var(--accent);
+  letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+}
+
+.term { font-size: 15.2px; line-height: 1.6; }
+.line { display: block; min-height: 1.6em; white-space: pre-wrap; word-break: break-word; font-variant-numeric: tabular-nums; }
+.line.cmd { color: var(--accent); }
+.line.cmd::before { content: "$ "; color: var(--fg-faint); }
+.line.suite { color: var(--fg); font-weight: 600; padding-top: 6px; }
+.line.subsuite { color: var(--fg-dim); padding-left: 2ch; }
+.line.test { color: var(--fg-dim); padding-left: 4ch; }
+.line.test .ok { color: var(--accent); margin-right: 0.5ch; }
+.line.test .ms { color: var(--fg-faint); }
+.line.summary { color: var(--accent); font-weight: 700; padding-top: 8px; font-size: 1.06em; }
+.line.summary::before { content: "✓ "; }
+.line.spacer { min-height: 0.55em; }
+.cursor {
+  display: inline-block; width: 0.5ch; height: 1.05em;
+  vertical-align: text-bottom; background: var(--accent);
+  margin-left: 2px; animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="viewport">
+  <div class="titlebar">
+    <span class="tdot r"></span><span class="tdot y"></span><span class="tdot g"></span>
+    <span class="titletext"><span class="titlebrand">anchor test</span><span class="titlesub">~/src/mppsol-cpi · localnet</span></span>
+    <span class="scenebadge">Scene 5 · Test Suite 12/12</span>
+  </div>
+  <div id="term" class="term"></div>
+</div>
+<script>
+const LINES = [
+  { type: 'cmd', text: 'anchor test --skip-build' },
+  { type: 'spacer' },
+  { type: 'suite', text: 'mppsol_session' },
+  { type: 'subsuite', text: 'open + topup + revoke' },
+  { type: 'test', text: '<span class="ok">✓</span> opens a session and escrows tokens <span class="ms">(1842 ms)</span>' },
+  { type: 'test', text: '<span class="ok">✓</span> tops up the cap <span class="ms">(892 ms)</span>' },
+  { type: 'test', text: '<span class="ok">✓</span> can be revoked by the owner <span class="ms">(517 ms)</span>' },
+  { type: 'subsuite', text: 'revoke by server' },
+  { type: 'test', text: '<span class="ok">✓</span> allows the server to revoke (server != owner) <span class="ms">(612 ms)</span>' },
+  { type: 'subsuite', text: 'settle (Ed25519 precompile + transfer)' },
+  { type: 'test', text: '<span class="ok">✓</span> settles a single signed debit and transfers from escrow <span class="ms">(1107 ms)</span>' },
+  { type: 'subsuite', text: 'settle (multi-debit batch)' },
+  { type: 'test', text: '<span class="ok">✓</span> settles a 2-debit batch atomically <span class="ms">(1294 ms)</span>' },
+  { type: 'subsuite', text: 'close' },
+  { type: 'test', text: '<span class="ok">✓</span> drains escrow + closes the session PDA after expiry <span class="ms">(893 ms)</span>' },
+  { type: 'spacer' },
+  { type: 'suite', text: 'mppsol_cpi' },
+  { type: 'subsuite', text: 'pay' },
+  { type: 'test', text: '<span class="ok">✓</span> transfers tokens and emits return data <span class="ms">(734 ms)</span>' },
+  { type: 'test', text: '<span class="ok">✓</span> rejects when expiry is in the past <span class="ms">(203 ms)</span>' },
+  { type: 'subsuite', text: 'verify_paid_result (via test_consumer CPI)' },
+  { type: 'test', text: '<span class="ok">✓</span> succeeds when Pay + valid server signature appear in same call stack <span class="ms">(901 ms)</span>' },
+  { type: 'subsuite', text: 'receipt accounts (v0.1.1 — atomic on-chain payment-binding)' },
+  { type: 'test', text: '<span class="ok">✓</span> pay_with_receipt → verify_paid_result_with_receipt → claim_receipt <span class="ms">(1486 ms)</span>' },
+  { type: 'subsuite', text: 'settle_via_session' },
+  { type: 'test', text: '<span class="ok">✓</span> CPIs into mppsol_session.settle and emits SES1 return data <span class="ms">(1158 ms)</span>' },
+  { type: 'spacer' },
+  { type: 'summary', text: '12 passing  (12 s)' },
+];
+
+const term = document.getElementById('term');
+const PER_LINE = 460;   // faster — it's a test log
+const CHAR_DELAY = 6;
+
+async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function typeLine(line) {
+  const el = document.createElement('span');
+  el.className = `line ${line.type}`;
+  term.appendChild(el);
+  if (line.type === 'spacer') { if (line.text) el.innerHTML = line.text; return; }
+  const text = line.text;
+  let isTag = false, buffer = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '<') isTag = true;
+    buffer += ch;
+    if (ch === '>') { isTag = false; el.innerHTML = buffer; continue; }
+    if (!isTag) {
+      el.innerHTML = buffer;
+      await sleep(CHAR_DELAY);
+    }
+  }
+}
+
+window.startScene = async () => {
+  for (const line of LINES) {
+    await typeLine(line);
+    await sleep(PER_LINE - (line.text?.length || 0) * CHAR_DELAY);
+  }
+  const cur = document.createElement('span');
+  cur.className = 'cursor';
+  term.appendChild(cur);
+  await sleep(3500);
+  window.__sceneDone = true;
+};
+</script>
+</body>
+</html>

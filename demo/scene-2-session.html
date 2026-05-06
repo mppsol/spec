@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MPP.sol — Scene 2: Session Mode</title>
+<style>
+:root {
+  --bg: #0a0a0c; --bg-soft: #14141a; --bg-card: #1a1a22;
+  --fg: #e8e8ee; --fg-dim: #9da0ad; --fg-faint: #6b6e7a;
+  --accent: #14F195; --accent-2: #9945FF; --orange: #FFB800;
+  --red: #ff6b6b; --border: #2a2a36;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg); color: var(--fg); width: 1280px; height: 800px;
+  font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 16px; line-height: 1.55;
+  -webkit-font-smoothing: antialiased; overflow: hidden;
+}
+.viewport { padding: 28px 44px; }
+.titlebar {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 18px;
+  padding-bottom: 14px; border-bottom: 1px solid var(--border);
+}
+.tdot { width: 12px; height: 12px; border-radius: 50%; }
+.tdot.r { background: #ff5f57; } .tdot.y { background: #ffbd2e; } .tdot.g { background: #28ca42; }
+.titletext { margin-left: 14px; color: var(--fg-dim); font-size: 0.92em; letter-spacing: 0.04em; }
+.titlebrand { color: var(--accent); font-weight: 600; }
+.titlesub { color: var(--fg-faint); margin-left: 10px; }
+.scenebadge {
+  margin-left: auto; font-size: 0.78em; color: var(--accent-2);
+  letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+}
+
+.term { font-size: 15.5px; line-height: 1.62; }
+.line { display: block; min-height: 1.62em; white-space: pre-wrap; word-break: break-word; }
+.line.cmd { color: var(--accent); }
+.line.cmd::before { content: "$ "; color: var(--fg-faint); }
+.line.comment { color: var(--fg-faint); }
+.line.comment::before { content: "# "; color: var(--fg-faint); }
+.line.arrow { color: var(--accent); }
+.line.arrow::before { content: "→ "; color: var(--accent); }
+.line.success { color: var(--accent); }
+.line.success::before { content: "✓ "; color: var(--accent); }
+.line.dim { color: var(--fg-dim); padding-left: 2ch; }
+.line.bracketed { color: var(--fg-dim); }
+.line.bracketed b { color: var(--orange); font-weight: 500; }
+.line.spacer { min-height: 0.55em; }
+.line.divider {
+  border-top: 1px dashed var(--border); margin: 12px 0 8px; padding-top: 8px;
+  color: var(--accent-2); font-size: 0.82em; text-transform: uppercase;
+  letter-spacing: 0.14em; min-height: auto;
+}
+.cursor {
+  display: inline-block; width: 0.5ch; height: 1.05em;
+  vertical-align: text-bottom; background: var(--accent);
+  margin-left: 2px; animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<div class="viewport">
+  <div class="titlebar">
+    <span class="tdot r"></span><span class="tdot y"></span><span class="tdot g"></span>
+    <span class="titletext"><span class="titlebrand">mppsol-session</span><span class="titlesub">~/src/mppsol-cpi</span></span>
+    <span class="scenebadge">Scene 2 · Session Mode</span>
+  </div>
+  <div id="term" class="term"></div>
+</div>
+<script>
+const LINES = [
+  { type: 'comment', text: 'Session mode: open once on-chain, then pay off-chain ~5ms per request' },
+  { type: 'spacer' },
+  { type: 'comment', text: 'STEP 1 — one-time on-chain setup' },
+  { type: 'cmd', text: 'export MPP_SERVER_PUBKEY=HD9k...m2N1' },
+  { type: 'cmd', text: 'bun run examples/open-session.ts' },
+  { type: 'bracketed', text: '[setup] payer: 7xKpQHL2yz...J4Vp' },
+  { type: 'bracketed', text: '[setup] server: HD9kEnDwTQ...m2N1' },
+  { type: 'bracketed', text: '[setup] session PDA: 6vQrXFhgL...wT8R' },
+  { type: 'bracketed', text: '[setup] cap: 1.000000 USDC escrowed' },
+  { type: 'success', text: 'session opened in tx 4Vpx9ZkRhYM...zXk' },
+  { type: 'success', text: 'authorized-signer.json written' },
+  { type: 'spacer' },
+  { type: 'divider', text: 'STEP 2 — off-chain pays · pure Ed25519 signing' },
+  { type: 'cmd', text: 'bun run examples/pay-session.ts --count 3' },
+  { type: 'bracketed', text: '[debit 1] amount=0.001 USDC  seq=1   <b>2.4 ms</b>' },
+  { type: 'bracketed', text: '[debit 2] amount=0.001 USDC  seq=2   <b>2.1 ms</b>' },
+  { type: 'bracketed', text: '[debit 3] amount=0.001 USDC  seq=3   <b>2.3 ms</b>' },
+  { type: 'arrow', text: '3 off-chain debits in 6.8 ms total' },
+  { type: 'spacer' },
+  { type: 'divider', text: 'STEP 3 — server batches & settles on-chain' },
+  { type: 'cmd', text: 'mppsol_session::settle  (1 tx, 3 debits)' },
+  { type: 'success', text: 'Ed25519 precompile verified all 3 signatures' },
+  { type: 'success', text: 'escrow → server: 0.003 USDC transferred' },
+  { type: 'success', text: 'settled in tx 8PnLrVyXsTm...gKq  (slot 460,182,408)' },
+  { type: 'spacer' },
+  { type: 'arrow', text: '3 paid requests · 1 on-chain tx · ~5ms / request' },
+];
+
+const term = document.getElementById('term');
+const PER_LINE = 600;
+const CHAR_DELAY = 10;
+
+async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function typeLine(line) {
+  const el = document.createElement('span');
+  el.className = `line ${line.type}`;
+  term.appendChild(el);
+  if (line.type === 'spacer' || line.type === 'divider') {
+    if (line.text) el.innerHTML = line.text;
+    return;
+  }
+  const text = line.text;
+  let isTag = false, buffer = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '<') isTag = true;
+    buffer += ch;
+    if (ch === '>') { isTag = false; el.innerHTML = buffer; continue; }
+    if (!isTag) {
+      el.innerHTML = buffer;
+      await sleep(CHAR_DELAY);
+    }
+  }
+}
+
+window.startScene = async () => {
+  for (const line of LINES) {
+    await typeLine(line);
+    await sleep(PER_LINE - (line.text?.length || 0) * CHAR_DELAY);
+  }
+  const cur = document.createElement('span');
+  cur.className = 'cursor';
+  term.appendChild(cur);
+  await sleep(3500);
+  window.__sceneDone = true;
+};
+</script>
+</body>
+</html>

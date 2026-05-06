@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MPP.sol — Opening</title>
+<style>
+:root {
+  --bg: #0a0a0c; --bg-glow: #14141a;
+  --fg: #e8e8ee; --fg-dim: #9da0ad; --fg-faint: #6b6e7a;
+  --accent: #14F195; --accent-2: #9945FF;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg); color: var(--fg); width: 1280px; height: 800px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+body::before {
+  content: ""; position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 50%, var(--bg-glow) 0%, var(--bg) 70%);
+}
+body::after {
+  content: ""; position: absolute; inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: 56px 56px;
+  pointer-events: none;
+}
+
+.stack {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center;
+}
+
+.eyebrow {
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 22px;
+  letter-spacing: 0.42em;
+  color: var(--accent);
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 38px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .55s ease, transform .55s ease;
+}
+.eyebrow.show { opacity: 1; transform: translateY(0); }
+
+.wordmark {
+  font-size: 168px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  color: var(--fg);
+  opacity: 0;
+  transform: scale(0.96);
+  transition: opacity .65s ease, transform .65s ease;
+}
+.wordmark.show { opacity: 1; transform: scale(1); }
+.wordmark .dot {
+  color: var(--accent);
+  display: inline-block;
+  margin: 0 -0.04em;
+}
+.wordmark .sol {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.divider {
+  width: 0; height: 2px; margin: 36px 0 28px;
+  background: linear-gradient(to right,
+    transparent 0%, var(--accent) 30%, var(--accent-2) 70%, transparent 100%);
+  opacity: 0; transition: width 1s ease, opacity .8s ease;
+}
+.divider.show { width: 480px; opacity: 0.85; }
+
+.tag {
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 26px;
+  color: var(--fg-dim);
+  letter-spacing: 0.16em;
+  font-weight: 500;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .6s ease, transform .6s ease;
+}
+.tag.show { opacity: 1; transform: translateY(0); }
+.tag .sep { color: var(--fg-faint); margin: 0 14px; }
+
+.footer {
+  position: absolute; bottom: 80px;
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 16px;
+  letter-spacing: 0.32em;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity .5s ease;
+}
+.footer.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="stack">
+  <div class="eyebrow" id="eyebrow">HTTP 402 · Solana</div>
+  <div class="wordmark" id="wordmark">MPP<span class="dot">.</span><span class="sol">sol</span></div>
+  <div class="divider" id="divider"></div>
+  <div class="tag" id="tag">
+    <span>Machine Payments Protocol</span>
+  </div>
+</div>
+<div class="footer" id="footer">5-scene live demo</div>
+
+<script>
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+window.startScene = async () => {
+  await sleep(400);
+  document.getElementById('eyebrow').classList.add('show');
+  await sleep(700);
+  document.getElementById('wordmark').classList.add('show');
+  await sleep(900);
+  document.getElementById('divider').classList.add('show');
+  await sleep(450);
+  document.getElementById('tag').classList.add('show');
+  await sleep(700);
+  document.getElementById('footer').classList.add('show');
+  await sleep(2200);
+  window.__sceneDone = true;
+};
+</script>
+</body>
+</html>

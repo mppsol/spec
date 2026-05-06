@@ -2,7 +2,9 @@
 
 **Live site:** https://mppsol.org
 **Org:** https://github.com/mppsol
-**Demo video:** *(record per [DEMO.md](./DEMO.md))*
+**Demo video:** [`demo/demo.mp4`](./demo/demo.mp4) — captured live, real devnet payment (or re-record per [DEMO.md](./DEMO.md))
+**Pitch deck:** [`deck.html`](./deck.html) — 10 slides, ~4 min · spoken script in [SPEAKER_NOTES.md](./SPEAKER_NOTES.md)
+**Pitch video script (2 min):** [`demo/PITCH.md`](./demo/PITCH.md)
 
 ---
 
@@ -28,8 +30,8 @@ on devnet.
 | `@mppsol/server` | ✅ on npm | HTTP middleware (Hono adapter included) |
 | `@mppsol/agent` | ✅ on npm | Client SDK with `mppFetch()` wrapper |
 | `mppsol_session` | ✅ devnet | On-chain Anchor program: PDA escrow + Ed25519 batched settle |
-| `mppsol_cpi` | ✅ devnet | Anchor program exposing MPP as a CPI primitive |
-| Tests | ✅ 108 passing | 60 vitest + 11 Anchor + 37 core |
+| `mppsol_cpi` | ✅ devnet | Anchor program exposing MPP as a CPI primitive (incl. v0.1.1 Receipt PDAs) |
+| Tests | ✅ 109 passing | 37 core + 40 server + 20 agent + 12 Anchor |
 | Examples | ✅ runnable | server (Hono), agent (direct + session), open-session |
 | CI | ✅ green | GitHub Actions, Node 20 + 22 |
 | Docs | ✅ live | https://mppsol.org with HTTPS |
@@ -40,9 +42,13 @@ on devnet.
 
 `mppsol_cpi` exposes MPP semantics as a Cross-Program Invocation
 target. Any Solana program can:
-- CPI into `Pay` to atomically pay for an off-chain resource
-- CPI into `VerifyPaidResult` to verify a server's signed result
+- CPI into `Pay` (or `pay_with_receipt` for atomic on-chain payment-binding) to pay for an off-chain resource
+- CPI into `VerifyPaidResult` / `verify_paid_result_with_receipt` to verify a server's signed result + Receipt PDA
 - CPI into `SettleViaSession` to settle a single session debit
+
+**v0.1.1 Receipt PDAs** (shipped mid-hackathon, originally a v0.2 deliverable)
+make payment-binding atomic and persistent across CPI and tx boundaries —
+no more reliance on the off-chain nonce-binding model.
 
 This is the differentiating capability. Tempo (EVM) cannot match it
 because EVM lacks Solana's atomic multi-instruction transaction model
@@ -100,21 +106,21 @@ without distributing JSON.
 - **`@mppsol/core`** — 37 tests (encode/decode round-trips, header parser/serializer, constants integrity)
 - **`@mppsol/server`** — 40 tests (nonce store, challenge, **direct-mode verifier covering 8 error codes**, full Hono integration)
 - **`@mppsol/agent`** — 20 tests (session signing, mppFetch direct + session, async signer, error paths)
-- **Anchor tests** — 11 tests on localnet covering all 5 session instructions and 3 of 4 cpi instructions
+- **Anchor tests** — 12 tests on localnet covering all 5 session instructions and all 7 cpi instructions (incl. v0.1.1 `pay_with_receipt`, `verify_paid_result_with_receipt`, `claim_receipt`)
 
-Total: **108 passing, 1 skipped** (get_receipt — same Solana runtime
-constraint as verify_paid_result; spec design works as written, just
-needs v0.2's receipt-account variant for cross-CPI persistence).
+Total: **109 passing**.
 
 ## What's intentionally NOT in v0.1
 
-- **Mainnet deployment** — pending audit
-- **Receipt-account variant** of Pay/Settle — v0.2 work for stronger
-  atomic on-chain payment-binding (current v0.1 trusts the off-chain
-  nonce model)
+- **Mainnet deployment** — pending audit + multisig transition of upgrade authority
 - **PDA-callable `Pay`** — v0.2 will add `pay_via_cpi` for programs
   invoking Pay on behalf of a PDA-controlled token account
 - **`@mppsol/cpi` IDL bindings to npm** — deferred until mainnet deploy
+- **Economic incentive layer** (server-griefing slashing) — v0.3 work, requires tokenomics review
+
+(The receipt-account variant for atomic on-chain payment-binding,
+originally listed here as a v0.2 deferral, **shipped mid-hackathon as
+v0.1.1** — see Risks table below.)
 
 These are documented honestly in each repo's README and in the spec
 itself (no marketing hand-wave).

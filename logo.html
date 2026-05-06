@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+:root {
+  --bg: #0a0a0c;
+  --bg-glow: #14141a;
+  --fg: #e8e8ee;
+  --fg-dim: #9da0ad;
+  --fg-faint: #555863;
+  --accent: #14F195;
+  --accent-2: #9945FF;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1024px; height: 1024px; }
+body {
+  background: radial-gradient(circle at 50% 50%, var(--bg-glow) 0%, var(--bg) 70%);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow: hidden;
+}
+/* Subtle grid backdrop */
+body::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(to right, rgba(255,255,255,0.018) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.018) 1px, transparent 1px);
+  background-size: 64px 64px;
+  pointer-events: none;
+}
+/* Corner brackets */
+.corner {
+  position: absolute;
+  width: 64px; height: 64px;
+  border: 2px solid var(--fg-faint);
+  opacity: 0.55;
+}
+.corner.tl { top: 80px; left: 80px; border-right: none; border-bottom: none; }
+.corner.tr { top: 80px; right: 80px; border-left: none; border-bottom: none; }
+.corner.bl { bottom: 80px; left: 80px; border-right: none; border-top: none; }
+.corner.br { bottom: 80px; right: 80px; border-left: none; border-top: none; }
+
+.eyebrow {
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 22px;
+  letter-spacing: 0.42em;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 56px;
+  text-transform: uppercase;
+}
+
+.wordmark {
+  font-size: 220px;
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  color: var(--fg);
+  text-align: center;
+}
+.wordmark .dot {
+  color: var(--accent);
+  display: inline-block;
+  margin: 0 -0.04em;
+}
+.wordmark .sol {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.divider {
+  width: 480px;
+  height: 2px;
+  margin: 56px 0 38px;
+  background: linear-gradient(to right, transparent 0%, var(--accent) 30%, var(--accent-2) 70%, transparent 100%);
+  opacity: 0.85;
+}
+
+.tag {
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 26px;
+  color: var(--fg-dim);
+  letter-spacing: 0.16em;
+  font-weight: 500;
+}
+.tag .sep { color: var(--fg-faint); margin: 0 14px; }
+.tag .accent { color: var(--accent); }
+
+.footer {
+  position: absolute; bottom: 110px;
+  font-family: "SF Mono", Menlo, monospace;
+  font-size: 18px;
+  letter-spacing: 0.32em;
+  color: var(--fg-faint);
+  text-transform: uppercase;
+  font-weight: 500;
+}
+</style>
+</head>
+<body>
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+
+  <div class="eyebrow">HTTP 402 · Solana</div>
+
+  <div class="wordmark">MPP<span class="dot">.</span><span class="sol">sol</span></div>
+
+  <div class="divider"></div>
+
+  <div class="tag">
+    <span>Machine Payments</span>
+    <span class="sep">·</span>
+    <span>On Solana</span>
+  </div>
+
+  <div class="footer">mppsol.org</div>
+</body>
+</html>
