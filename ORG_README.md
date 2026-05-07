@@ -16,9 +16,7 @@ Stripe + Tempo Labs co-authored [MPP](https://docs.stripe.com/payments/machine/m
 | Repo | What it is |
 | --- | --- |
 | **[spec](https://github.com/mppsol/spec)** | RFC-style spec (5 docs) + landing site at mppsol.org |
-| **[core](https://github.com/mppsol/core)** | Shared TypeScript types + canonical encodings — [`@mppsol/core`](https://www.npmjs.com/package/@mppsol/core) |
-| **[server](https://github.com/mppsol/server)** | HTTP middleware (Hono adapter) — [`@mppsol/server`](https://www.npmjs.com/package/@mppsol/server) |
-| **[agent](https://github.com/mppsol/agent)** | Client SDK with a single `mppFetch()` call — [`@mppsol/agent`](https://www.npmjs.com/package/@mppsol/agent) |
+| **[sdk](https://github.com/mppsol/sdk)** | TypeScript SDK monorepo: [`@mppsol/core`](https://www.npmjs.com/package/@mppsol/core) (shared types + canonical encodings), [`@mppsol/server`](https://www.npmjs.com/package/@mppsol/server) (HTTP middleware, Hono adapter), [`@mppsol/agent`](https://www.npmjs.com/package/@mppsol/agent) (client SDK with a single `mppFetch()` call) |
 | **[cpi](https://github.com/mppsol/cpi)** | Two Anchor programs: `mppsol_session` (escrow + Ed25519 batch settle) and `mppsol_cpi` (the CPI primitive) |
 
 ---

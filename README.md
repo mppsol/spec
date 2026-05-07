@@ -31,9 +31,7 @@ This repo (`mppsol/spec`) holds the specification. Reference implementations:
 
 | Repo | Purpose |
 | --- | --- |
-| [`mppsol/core`](https://github.com/mppsol/core) | Shared types, receipt format, session schema. |
-| [`mppsol/server`](https://github.com/mppsol/server) | HTTP middleware (Hono, FastAPI) emitting MPP `402` and verifying Solana settlement. |
-| [`mppsol/agent`](https://github.com/mppsol/agent) | Client SDK (TypeScript, Python) for agents holding Solana USDC. |
+| [`mppsol/sdk`](https://github.com/mppsol/sdk) | TypeScript SDK monorepo. Contains `packages/core` (shared types, receipt format, session schema), `packages/server` (HTTP middleware emitting MPP `402` and verifying Solana settlement), and `packages/agent` (client SDK for agents holding Solana USDC). |
 | [`mppsol/cpi`](https://github.com/mppsol/cpi) | Solana program exposing MPP semantics as a CPI target. |
 
 ## Specification contents
