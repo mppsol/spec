@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MPP.sol — 2-min Pitch</title>
+<style>
+:root {
+  --bg: #0a0a0c;
+  --bg-soft: #14141a;
+  --bg-card: #1a1a22;
+  --fg: #e8e8ee;
+  --fg-dim: #9da0ad;
+  --fg-faint: #6b6e7a;
+  --accent: #14F195;
+  --accent-2: #9945FF;
+  --orange: #FFB800;
+  --red: #ff6b6b;
+  --border: #2a2a36;
+  --code-bg: #0f0f14;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body {
+  background: var(--bg); color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Inter", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; overflow: hidden;
+  width: 100vw; height: 100vh;
+}
+code, pre, .mono { font-family: "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace; }
+a { color: var(--accent); text-decoration: none; border-bottom: 1px solid transparent; transition: border-color .15s; }
+a:hover { border-bottom-color: var(--accent); }
+
+#deck {
+  position: relative;
+  width: 100vw; height: 100vh;
+}
+section.slide {
+  position: absolute; inset: 0;
+  width: 100vw; height: 100vh;
+  padding: 6vh 8vw;
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .35s ease;
+}
+section.slide.active {
+  display: flex;
+  opacity: 1;
+}
+
+.eyebrow {
+  font-size: 0.95rem; color: var(--accent);
+  letter-spacing: 0.18em; text-transform: uppercase;
+  font-weight: 600; margin-bottom: 14px;
+}
+.eyebrow.muted { color: var(--fg-faint); }
+h1 { font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 700; letter-spacing: -0.02em; line-height: 1.02; margin-bottom: 24px; }
+h2 { font-size: clamp(2rem, 4.5vw, 3.4rem); font-weight: 700; letter-spacing: -0.018em; line-height: 1.08; margin-bottom: 20px; }
+h3 { font-size: clamp(1.2rem, 2vw, 1.6rem); font-weight: 600; margin: 18px 0 10px; }
+p, li { font-size: clamp(1rem, 1.4vw, 1.25rem); color: var(--fg-dim); line-height: 1.5; max-width: 60ch; margin-bottom: 12px; }
+li { margin-bottom: 8px; }
+.tag { font-size: clamp(1.15rem, 1.6vw, 1.4rem); color: var(--fg-dim); max-width: 70ch; margin-bottom: 24px; line-height: 1.45; }
+
+.accent { color: var(--accent); }
+.accent-2 { color: var(--accent-2); }
+.orange { color: var(--orange); }
+.dim { color: var(--fg-dim); }
+.faint { color: var(--fg-faint); }
+.bold { font-weight: 600; color: var(--fg); }
+.strike { text-decoration: line-through; opacity: 0.5; }
+
+.kbd, code.inline {
+  font-family: "SF Mono", Menlo, monospace; font-size: 0.86em;
+  background: var(--bg-soft); padding: 2px 7px; border-radius: 4px;
+  border: 1px solid var(--border); color: var(--fg);
+}
+
+.grid { display: grid; gap: 18px; }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+.card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 22px 24px;
+}
+.card .label { font-size: 0.78em; color: var(--fg-faint); letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; }
+.card .value { font-size: clamp(1.4rem, 2.2vw, 1.9rem); color: var(--accent); margin-top: 8px; font-weight: 600; }
+.card .sub { font-size: 0.92em; color: var(--fg-dim); margin-top: 6px; }
+
+.list-clean { list-style: none; padding: 0; }
+.list-clean li { padding-left: 1.5em; position: relative; }
+.list-clean li::before { content: "▸"; color: var(--accent); position: absolute; left: 0; top: 0.05em; }
+
+.list-check { list-style: none; padding: 0; }
+.list-check li { padding-left: 1.7em; position: relative; }
+.list-check li::before { content: "✓"; color: var(--accent); position: absolute; left: 0; font-weight: 700; }
+
+table.t { border-collapse: collapse; font-size: clamp(0.95rem, 1.2vw, 1.1rem); width: 100%; }
+table.t th, table.t td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+table.t th { color: var(--fg-faint); font-weight: 500; font-size: 0.8em; text-transform: uppercase; letter-spacing: 0.08em; }
+table.t .ok { color: var(--accent); }
+table.t .pending { color: var(--orange); }
+table.t code { font-size: 0.88em; }
+
+.ascii {
+  font-family: "SF Mono", Menlo, monospace;
+  white-space: pre; font-size: clamp(0.78rem, 1vw, 0.95rem);
+  line-height: 1.4; color: var(--fg-dim);
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 18px 22px; overflow-x: auto;
+}
+
+.quote {
+  border-left: 3px solid var(--accent);
+  padding-left: 22px;
+  font-size: clamp(1.3rem, 2vw, 1.7rem);
+  color: var(--fg); line-height: 1.4;
+  font-style: italic;
+  max-width: 70ch;
+}
+.quote-attr { display: block; margin-top: 14px; font-size: 0.85em; color: var(--fg-faint); font-style: normal; letter-spacing: 0.04em; }
+
+.big-stat {
+  display: flex; align-items: baseline; gap: 18px;
+  margin: 24px 0;
+}
+.big-stat .num { font-size: clamp(3rem, 7vw, 5rem); font-weight: 700; color: var(--accent); line-height: 1; }
+.big-stat .label { font-size: clamp(1rem, 1.4vw, 1.2rem); color: var(--fg-dim); }
+
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+.cta-row .pill { padding: 10px 18px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; color: var(--fg); font-weight: 500; font-size: 0.95em; }
+.cta-row .pill.primary { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+.pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.pill-row .pill { padding: 4px 10px; background: var(--bg-soft); border: 1px solid var(--border); border-radius: 100px; color: var(--fg-dim); font-size: 0.82em; }
+
+#hud {
+  position: fixed; right: 20px; bottom: 14px;
+  font-family: "SF Mono", Menlo, monospace; font-size: 0.78em;
+  color: var(--fg-faint); letter-spacing: 0.08em;
+  user-select: none; pointer-events: none;
+}
+#hud .sep { color: var(--border); }
+#hud .hint { color: var(--fg-faint); margin-left: 16px; }
+#hud .num-current { color: var(--accent); }
+
+#brand {
+  position: fixed; left: 20px; bottom: 14px;
+  font-family: "SF Mono", Menlo, monospace; font-size: 0.78em;
+  color: var(--accent); letter-spacing: 0.16em;
+  font-weight: 600; user-select: none; pointer-events: none;
+}
+
+.subline { color: var(--fg-faint); font-size: 0.96em; margin-top: 18px; max-width: 70ch; }
+
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; align-items: start; }
+.split > div > h3 { margin-top: 0; }
+
+@media (max-width: 700px) {
+  section.slide { padding: 5vh 6vw; }
+  .split { grid-template-columns: 1fr; }
+}
+
+.notes { display: none !important; }
+
+#notes-panel {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  height: 38vh;
+  background: rgba(15,15,20,0.97);
+  border-top: 1px solid var(--border);
+  padding: 16px 36px 20px;
+  overflow-y: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro", "Inter", Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  color: var(--fg);
+  z-index: 100;
+  display: none;
+  backdrop-filter: blur(8px);
+}
+body.notes-on #notes-panel { display: block; }
+body.notes-on section.slide { padding-bottom: 42vh; padding-top: 3vh; justify-content: flex-start; }
+body.notes-on #brand, body.notes-on #hud { bottom: calc(38vh + 12px); }
+
+#notes-panel .label {
+  font-size: 0.78em; color: var(--accent); letter-spacing: 0.15em;
+  text-transform: uppercase; margin-bottom: 8px; font-weight: 600;
+}
+#notes-panel .content { color: var(--fg); }
+#notes-panel .content strong { color: var(--accent); }
+#notes-panel .content em { color: var(--accent-2); font-style: normal; }
+#notes-panel p { margin: 0 0 8px 0; color: var(--fg); font-size: clamp(0.95rem, 1.15vw, 1.1rem); }
+#notes-panel p:last-child { margin-bottom: 0; }
+#notes-panel .timing { color: var(--orange); font-size: 0.85em; margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<main id="deck">
+
+  <!-- 1: Hook -->
+  <section class="slide active">
+    <div class="eyebrow">MPP.sol</div>
+    <h1>Stripe for<br><span class="accent">Solana agents.</span></h1>
+    <p class="tag">
+      Machine Payments Protocol on Solana. HTTP <code class="inline">402</code> →
+      pay → 200 OK + receipt. <span class="bold">Direct mode mainnet-ready today.</span>
+    </p>
+    <p class="subline">Hiroyuki Saito · Tokyo · github.com/mppsol · mppsol.org</p>
+    <aside class="notes">
+      <div class="timing">⏱ 0:00–0:10</div>
+      <div class="content">
+        <p>I'm <strong>Hiro</strong>. <strong>MPP.sol is Stripe for Solana agents</strong> — the HTTP 402 standard for machine payments, shipped on Solana. <strong>Direct mode is mainnet-ready today.</strong></p>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 2: The gap -->
+  <section class="slide">
+    <div class="eyebrow">The gap</div>
+    <h2>Stripe shipped HTTP 402<br>for AI agents.<br>Solana has <span class="orange">no adapter.</span></h2>
+    <p class="subline" style="margin-top: 14px;"><span class="bold">100+ services</span> in Tempo's payments directory at mainnet · <span class="bold">Visa</span> contributed cards spec · <span class="bold">Cloudflare</span> ships MPP in their Agents framework · <span class="bold">Meta</span> routes USDC via Solana via Stripe</p>
+    <div class="grid grid-3" style="margin-top: 22px;">
+      <div class="card">
+        <div class="label">Tempo (EVM)</div>
+        <div class="value" style="color: var(--accent-2);">Captive L1</div>
+        <div class="sub">Doesn't compose with Solana DeFi or Solana-USDC agents</div>
+      </div>
+      <div class="card">
+        <div class="label">sendaifun/solana-mpp</div>
+        <div class="value" style="color: var(--orange);">Experimental</div>
+        <div class="sub">HTTP-only, in-memory, no CPI primitive</div>
+      </div>
+      <div class="card">
+        <div class="label">Stripe Crypto / Coinbase</div>
+        <div class="value" style="color: var(--fg-dim);">Closed stacks</div>
+        <div class="sub">Vertically integrated — no open standard for devs</div>
+      </div>
+    </div>
+    <aside class="notes">
+      <div class="timing">⏱ 0:10–0:30</div>
+      <div class="content">
+        <p>Stripe and Tempo just shipped <strong>MPP — HTTP 402 for AI agent payments</strong>. <strong>100+ services in Tempo's payments directory at mainnet — Visa, Cloudflare, Meta already in.</strong> But Solana — the chain Meta actually settles on — has no open adapter. Tempo is captive EVM. The existing Solana effort is experimental. Stripe Crypto and Coinbase are closed stacks.</p>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 3: What I shipped -->
+  <section class="slide">
+    <div class="eyebrow">5 weeks, solo</div>
+    <h2>The full Solana stack.<br><span class="dim">Spec → SDK → on-chain.</span></h2>
+    <div class="grid grid-4" style="margin-top: 24px;">
+      <div class="card">
+        <div class="label">Tests passing</div>
+        <div class="value">109</div>
+        <div class="sub">vitest + anchor</div>
+      </div>
+      <div class="card">
+        <div class="label">npm packages</div>
+        <div class="value">3</div>
+        <div class="sub">@mppsol/{core,server,agent}</div>
+      </div>
+      <div class="card">
+        <div class="label">Anchor programs</div>
+        <div class="value">2</div>
+        <div class="sub">Solana devnet</div>
+      </div>
+      <div class="card">
+        <div class="label">RFC spec</div>
+        <div class="value">5 docs</div>
+        <div class="sub">mppsol.org</div>
+      </div>
+    </div>
+    <p class="subline" style="margin-top: 28px;">All Apache-2.0. <span class="bold">Direct mode mainnet-ready</span> — 40 server tests, 8 error codes. Session program + CPI primitive on devnet.</p>
+    <aside class="notes">
+      <div class="timing">⏱ 0:30–0:52</div>
+      <div class="content">
+        <p>Five weeks, solo. <strong>The full Solana stack.</strong> <strong>109 tests, 3 npm packages, 2 Anchor programs on devnet, 5-doc RFC spec at mppsol.org.</strong> All Apache-2.0. <strong>Direct mode is mainnet-ready.</strong></p>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 4: The moat -->
+  <section class="slide">
+    <div class="eyebrow">The moat</div>
+    <h2>The piece <span class="orange">EVM cannot match.</span></h2>
+    <div class="ascii" style="margin-top: 12px;">caller program ──CPI──▶ mppsol_cpi
+                            │
+                            ├─ pay_with_receipt ───▶ payment + Receipt PDA
+                            ├─ SettleViaSession ───▶ session debit + receipt
+                            └─ verify_paid_result_with_receipt
+                                 ├─ Ed25519-verifies signed result
+                                 └─ asserts Receipt PDA matches (atomic)
+</div>
+    <p class="tag" style="margin-top: 22px;">Any Solana program CPIs into <code class="inline">mppsol_cpi</code> to atomically <span class="bold">pay for and consume</span> off-chain resources — oracles, KYC, signals — inside one transaction. <span class="orange bold">Solana-only.</span></p>
+    <aside class="notes">
+      <div class="timing">⏱ 0:52–1:11</div>
+      <div class="content">
+        <p>The piece EVM cannot match. <strong>A CPI primitive.</strong> Any Solana program can CPI into <code class="inline">mppsol_cpi</code> to atomically pay for and consume off-chain resources — oracles, KYC, signals — inside one transaction. <strong>EVM has no atomic multi-instruction tx model. Solana-only.</strong></p>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 5: Real proof -->
+  <section class="slide">
+    <div class="eyebrow">Not slideware</div>
+    <h2>Real devnet tx.<br><span class="accent">Finalized.</span></h2>
+    <div class="grid grid-4" style="margin-top: 24px;">
+      <div class="card">
+        <div class="label">Status</div>
+        <div class="value">FINALIZED</div>
+        <div class="sub">slot 460,181,691</div>
+      </div>
+      <div class="card">
+        <div class="label">Compute units</div>
+        <div class="value">17,236</div>
+        <div class="sub">SPL transfer + Memo nonce</div>
+      </div>
+      <div class="card">
+        <div class="label">Fee</div>
+        <div class="value">$0.0008</div>
+        <div class="sub">0.000005 SOL</div>
+      </div>
+      <div class="card">
+        <div class="label">End-to-end</div>
+        <div class="value">~400ms</div>
+        <div class="sub">EVM: 12s+, $0.50+</div>
+      </div>
+    </div>
+    <p class="subline" style="margin-top: 18px;">Agent dev writes <code class="inline">mppFetch(url)</code>. Service dev writes one Hono middleware line. <span class="accent bold">That's the UX.</span></p>
+    <p class="subline mono" style="margin-top: 12px; font-size: 0.78em; word-break: break-all;">
+      explorer.solana.com/tx/<span class="accent">4ycgDjjD9AgM5qT51qwxjvnrerP2VFgP2tn8GFxvWD3tvYprE2jsyjQcQ3ZCjCjcaP34DXdYmKdcbjKAFh9Zf2qJ</span>?cluster=devnet
+    </p>
+    <aside class="notes">
+      <div class="timing">⏱ 1:11–1:31</div>
+      <div class="content">
+        <p>Not slideware. <strong>Real devnet payment, finalized.</strong> Slot four-six-zero million. <strong>Seventeen thousand compute units. Eight-hundredths of a cent in fees. End-to-end about four hundred milliseconds.</strong> EVM equivalent: twelve seconds, fifty cents. <strong>The UX: agent dev writes one <code class="inline">mppFetch</code> call. Service dev writes one middleware line.</strong></p>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 6: What's next -->
+  <section class="slide">
+    <div class="eyebrow">Next</div>
+    <h2>Mainnet, then<br><span class="accent">deep on one merchant pain.</span></h2>
+    <div class="split" style="margin-top: 22px;">
+      <div>
+        <h3 class="accent">1. Mainnet</h3>
+        <ul class="list-clean">
+          <li>Audit + multisig transition of upgrade authority</li>
+          <li>Promote <code class="inline">@mppsol/*</code> to <code class="inline">@latest</code></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="accent-2">2. soltempo — first narrow product</h3>
+        <ul class="list-clean">
+          <li>Tempo merchant idle USDC → Solana yield via mppsol bridge</li>
+          <li>Auto-bridges above buffer to Kamino; pulls back on payouts</li>
+          <li>One narrow merchant pain. Real distribution.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="subline" style="margin-top: 18px;">Don't build more infra. Solve one merchant pain with depth, then expand.</p>
+    <aside class="notes">
+      <div class="timing">⏱ 1:31–1:47</div>
+      <div class="content">
+        <p>What's next. <strong>Mainnet</strong> — audit and multisig. Then the first deep product on top: <strong>soltempo</strong>. Tempo merchants get zero yield today. Soltempo auto-bridges idle USDC to Solana DeFi via mppsol, pulls back on payouts. <strong>One narrow merchant pain.</strong></p>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 7: Ask -->
+  <section class="slide">
+    <div class="eyebrow">Ask</div>
+    <h2>Colosseum accelerator.<br><span class="dim">To mainnet, audit, soltempo.</span></h2>
+    <div class="big-stat" style="margin-top: 22px;">
+      <span class="num">109</span><span class="label">tests · 3 npm packages · 2 Anchor programs · 5-doc RFC spec</span>
+    </div>
+    <p class="subline" style="margin-top: 14px;">Open standard, paid hosted infra — nonce/session storage, upgrade-authority custody, settlement batching. <span class="bold accent">Stripe model.</span></p>
+    <div class="cta-row">
+      <a class="pill primary" href="https://mppsol.org">mppsol.org</a>
+      <a class="pill" href="https://github.com/mppsol">github.com/mppsol</a>
+      <a class="pill" href="https://www.npmjs.com/package/@mppsol/server">@mppsol on npm</a>
+    </div>
+    <aside class="notes">
+      <div class="timing">⏱ 1:47–2:04</div>
+      <div class="content">
+        <p>The ask. <strong>Colosseum accelerator</strong> — to ship mainnet, audit, and soltempo. <strong>Open standard, paid hosted infra</strong> — nonce/session storage, upgrade-authority custody, settlement batching. <strong>Same model as Stripe.</strong> mppsol.org. github.com/mppsol. <strong>Thank you.</strong></p>
+      </div>
+    </aside>
+  </section>
+
+</main>
+
+<div id="notes-panel" aria-hidden="true">
+  <div class="timing"></div>
+  <div class="content"></div>
+</div>
+
+<div id="brand">MPP.SOL · 2-MIN</div>
+<div id="hud">
+  <span class="num-current">1</span><span class="sep"> / </span><span id="total">7</span>
+  <span class="hint">←/→ space · N notes · F fullscreen</span>
+</div>
+
+<script>
+const slides = document.querySelectorAll('section.slide');
+const total = slides.length;
+let cur = 0;
+document.getElementById('total').textContent = total;
+const numEl = document.querySelector('#hud .num-current');
+const notesPanel = document.getElementById('notes-panel');
+const notesTiming = notesPanel.querySelector('.timing');
+const notesContent = notesPanel.querySelector('.content');
+
+function syncNotes() {
+  const aside = slides[cur].querySelector('aside.notes');
+  if (!aside) {
+    notesTiming.textContent = '';
+    notesContent.innerHTML = '<em style="color: var(--fg-faint);">No notes for this slide.</em>';
+    return;
+  }
+  const t = aside.querySelector('.timing');
+  const c = aside.querySelector('.content');
+  notesTiming.textContent = t ? t.textContent : '';
+  notesContent.innerHTML = c ? c.innerHTML : '';
+}
+
+function show(idx) {
+  if (idx < 0 || idx >= total) return;
+  slides[cur].classList.remove('active');
+  cur = idx;
+  slides[cur].classList.add('active');
+  numEl.textContent = cur + 1;
+  history.replaceState(null, '', '#' + (cur + 1));
+  syncNotes();
+}
+
+function toggleNotes() {
+  document.body.classList.toggle('notes-on');
+}
+
+function next() { show(Math.min(cur + 1, total - 1)); }
+function prev() { show(Math.max(cur - 1, 0)); }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+  else if (e.key === 'Home') { show(0); }
+  else if (e.key === 'End') { show(total - 1); }
+  else if (e.key === 'f' || e.key === 'F') {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+  } else if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault(); toggleNotes();
+  } else if (/^[0-9]$/.test(e.key)) {
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= total) show(n - 1);
+    else if (n === 0 && total >= 10) show(9);
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('a')) return;
+  if (e.clientX < window.innerWidth / 3) prev();
+  else next();
+});
+
+window.show = show;
+function applyHash() {
+  const fromHash = parseInt((location.hash || '#1').slice(1), 10);
+  if (Number.isFinite(fromHash) && fromHash >= 1 && fromHash <= total) {
+    show(fromHash - 1);
+  }
+}
+window.addEventListener('hashchange', applyHash);
+applyHash();
+syncNotes();
+</script>
+
+</body>
+</html>
