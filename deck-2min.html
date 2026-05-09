@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MPP.sol — 2-min Pitch</title>
+<title>MPP.sol — Stripe-grade payments meet Solana DeFi (2-min Pitch)</title>
 <style>
 :root {
   --bg: #0a0a0c;
@@ -203,16 +203,15 @@ body.notes-on #brand, body.notes-on #hud { bottom: calc(38vh + 12px); }
   <!-- 1: Hook -->
   <section class="slide active">
     <div class="eyebrow">MPP.sol</div>
-    <h1>Stripe for<br><span class="accent">Solana agents.</span></h1>
+    <h1>Stripe-grade payments<br><span class="accent">meet Solana DeFi.</span></h1>
     <p class="tag">
-      Machine Payments Protocol on Solana. HTTP <code class="inline">402</code> →
-      pay → 200 OK + receipt. <span class="bold">Direct mode mainnet-ready today.</span>
+      <span class="bold">mppsol</span> is the cross-VM settlement primitive — payments originating in EVM contracts (Tempo, Arc, Megaeth) settle atomically on Solana with on-chain Receipt PDAs. <span class="bold">soltempo</span> is the first product on top.
     </p>
     <p class="subline">Hiroyuki Saito · Tokyo · github.com/mppsol · mppsol.org</p>
     <aside class="notes">
       <div class="timing">⏱ 0:00–0:10</div>
       <div class="content">
-        <p>I'm <strong>Hiro</strong>. <strong>MPP.sol is Stripe for Solana agents</strong> — the HTTP 402 standard for machine payments, shipped on Solana. <strong>Direct mode is mainnet-ready today.</strong></p>
+        <p>I'm <strong>Hiro</strong>. <strong>mppsol is where Stripe-grade payments meet Solana DeFi</strong> — a cross-VM settlement primitive between EVM-based L1s like Tempo and Solana. <strong>soltempo</strong> is the first product on top of it.</p>
       </div>
     </aside>
   </section>
@@ -220,153 +219,137 @@ body.notes-on #brand, body.notes-on #hud { bottom: calc(38vh + 12px); }
   <!-- 2: The gap -->
   <section class="slide">
     <div class="eyebrow">The gap</div>
-    <h2>Stripe shipped HTTP 402<br>for AI agents.<br>Solana has <span class="orange">no adapter.</span></h2>
-    <p class="subline" style="margin-top: 14px;"><span class="bold">100+ services</span> in Tempo's payments directory at mainnet · <span class="bold">Visa</span> contributed cards spec · <span class="bold">Cloudflare</span> ships MPP in their Agents framework · <span class="bold">Meta</span> routes USDC via Solana via Stripe</p>
+    <h2>Foundation owns Solana MPP.<br><span class="accent">mppsol owns cross-VM.</span></h2>
+    <p class="subline" style="margin-top: 14px;">Stripe + Tempo Labs shipped MPP — HTTP 402 for machine payments. Solana Foundation shipped <code class="inline">@solana/mpp</code> 2026-03-18 (5-language SDK, sessions via Swig). What neither covers: <span class="bold">payments originating in EVM contracts settling atomically on Solana with on-chain receipts.</span></p>
     <div class="grid grid-3" style="margin-top: 22px;">
       <div class="card">
-        <div class="label">Tempo (EVM)</div>
-        <div class="value" style="color: var(--accent-2);">Captive L1</div>
-        <div class="sub">Doesn't compose with Solana DeFi or Solana-USDC agents</div>
+        <div class="label">Foundation @solana/mpp</div>
+        <div class="value">Solana-native</div>
+        <div class="sub">5 languages · sessions · payment links · doesn't touch EVM</div>
       </div>
       <div class="card">
-        <div class="label">sendaifun/solana-mpp</div>
-        <div class="value" style="color: var(--orange);">Experimental</div>
-        <div class="sub">HTTP-only, in-memory, no CPI primitive</div>
+        <div class="label">Wormhole · CCIP</div>
+        <div class="value" style="color: var(--accent-2);">Generic messaging</div>
+        <div class="sub">Cross-chain message passing — not settlement primitives</div>
       </div>
       <div class="card">
-        <div class="label">Stripe Crypto / Coinbase</div>
-        <div class="value" style="color: var(--fg-dim);">Closed stacks</div>
-        <div class="sub">Vertically integrated — no open standard for devs</div>
+        <div class="label">mppsol</div>
+        <div class="value" style="color: var(--orange);">Cross-VM settlement</div>
+        <div class="sub">EVM origin → Solana atomic settle + Receipt PDA bound to source</div>
       </div>
     </div>
     <aside class="notes">
-      <div class="timing">⏱ 0:10–0:30</div>
+      <div class="timing">⏱ 0:10–0:35</div>
       <div class="content">
-        <p>Stripe and Tempo just shipped <strong>MPP — HTTP 402 for AI agent payments</strong>. <strong>100+ services in Tempo's payments directory at mainnet — Visa, Cloudflare, Meta already in.</strong> But Solana — the chain Meta actually settles on — has no open adapter. Tempo is captive EVM. The existing Solana effort is experimental. Stripe Crypto and Coinbase are closed stacks.</p>
+        <p>Stripe and Tempo shipped MPP — HTTP 402 for machine payments. The Solana Foundation shipped <code class="inline">@solana/mpp</code> in March covering Solana-native flows in five languages. What neither covers: <strong>payments originating in EVM contracts — Tempo, Arc, Megaeth — settling atomically on Solana with on-chain receipts.</strong> That's where mppsol lives. Wormhole and CCIP do generic messaging, not settlement primitives.</p>
       </div>
     </aside>
   </section>
 
-  <!-- 3: What I shipped -->
+  <!-- 3: Architecture -->
   <section class="slide">
-    <div class="eyebrow">5 weeks, solo</div>
-    <h2>The full Solana stack.<br><span class="dim">Spec → SDK → on-chain.</span></h2>
+    <div class="eyebrow">Architecture</div>
+    <h2>Tempo origin → CCIP → Solana<br><span class="accent">+ on-chain Receipt PDA</span></h2>
+    <div class="ascii" style="margin-top: 16px;">   ┌──────────────────────┐
+   │ Tempo Solidity (Reth) │   emits cross-VM settlement intent
+   └──────────┬────────────┘
+              │ ccipSend
+              ▼
+   ┌──────────────────────┐
+   │   Chainlink CCIP      │   activated on Tempo 2026-05-08 — only confirmed
+   └──────────┬────────────┘   Tempo↔Solana rail today
+              │
+              ▼
+   ┌──────────────────────┐
+   │  Solana Anchor vault  │
+   │  ccip_receive()       │
+   │   ──CPI──▶ mppsol_cpi │   atomic settle + Receipt PDA
+   │            pay_with_  │   bound to EVM origin
+   │            receipt    │
+   └──────────────────────┘</div>
+    <aside class="notes">
+      <div class="timing">⏱ 0:35–0:57</div>
+      <div class="content">
+        <p>The flow. A Tempo Solidity contract emits a settlement intent. <strong>Chainlink CCIP — just activated on Tempo this week</strong> — delivers it to Solana. Our Anchor vault receives it and atomically settles via <code class="inline">mppsol_cpi.pay_with_receipt</code>, emitting a Receipt PDA bound to the EVM origin. <strong>Auditable cross-VM payments, on-chain.</strong></p>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 4: What ships today -->
+  <section class="slide">
+    <div class="eyebrow">What ships today</div>
+    <h2>Solana primitives <span class="accent">live on devnet.</span></h2>
     <div class="grid grid-4" style="margin-top: 24px;">
       <div class="card">
-        <div class="label">Tests passing</div>
-        <div class="value">109</div>
-        <div class="sub">vitest + anchor</div>
+        <div class="label">mppsol_cpi</div>
+        <div class="value">on devnet</div>
+        <div class="sub">Atomic settlement + Receipt PDA emission</div>
       </div>
       <div class="card">
-        <div class="label">npm packages</div>
-        <div class="value">3</div>
-        <div class="sub">@mppsol/{core,server,agent}</div>
+        <div class="label">mppsol_session</div>
+        <div class="value">on devnet</div>
+        <div class="sub">Cross-VM session escrow + Ed25519 batched settle</div>
       </div>
       <div class="card">
-        <div class="label">Anchor programs</div>
-        <div class="value">2</div>
-        <div class="sub">Solana devnet</div>
+        <div class="label">Anchor tests</div>
+        <div class="value">12 passing</div>
+        <div class="sub">Localnet integration suite</div>
       </div>
       <div class="card">
-        <div class="label">RFC spec</div>
-        <div class="value">5 docs</div>
-        <div class="sub">mppsol.org</div>
+        <div class="label">Tempo Solidity</div>
+        <div class="value">scaffolded</div>
+        <div class="sub">Real Chainlink CCIP integration in Foundry</div>
       </div>
     </div>
-    <p class="subline" style="margin-top: 28px;">All Apache-2.0. <span class="bold">Direct mode mainnet-ready</span> — 40 server tests, 8 error codes. Session program + CPI primitive on devnet.</p>
+    <p class="subline" style="margin-top: 18px;">All Apache-2.0. Mainnet pending audit + multisig transition of upgrade authority. <span class="bold">v0.2 deliverable:</span> end-to-end Tempo testnet → CCIP → Solana → Receipt PDA demo via soltempo.</p>
     <aside class="notes">
-      <div class="timing">⏱ 0:30–0:52</div>
+      <div class="timing">⏱ 0:57–1:17</div>
       <div class="content">
-        <p>Five weeks, solo. <strong>The full Solana stack.</strong> <strong>109 tests, 3 npm packages, 2 Anchor programs on devnet, 5-doc RFC spec at mppsol.org.</strong> All Apache-2.0. <strong>Direct mode is mainnet-ready.</strong></p>
+        <p>What's live today. <strong>Two Solana Anchor programs deployed on devnet</strong> — mppsol_cpi for atomic settlement, mppsol_session for cross-VM session escrow. Twelve Anchor tests passing. The Tempo Solidity contract is scaffolded with real Chainlink CCIP integration. <strong>Mainnet pending audit. End-to-end demo in v0.2 via soltempo.</strong></p>
       </div>
     </aside>
   </section>
 
-  <!-- 4: The moat -->
+  <!-- 5: First consumer — soltempo -->
   <section class="slide">
-    <div class="eyebrow">The moat</div>
-    <h2>The piece <span class="orange">EVM cannot match.</span></h2>
-    <div class="ascii" style="margin-top: 12px;">caller program ──CPI──▶ mppsol_cpi
-                            │
-                            ├─ pay_with_receipt ───▶ payment + Receipt PDA
-                            ├─ SettleViaSession ───▶ session debit + receipt
-                            └─ verify_paid_result_with_receipt
-                                 ├─ Ed25519-verifies signed result
-                                 └─ asserts Receipt PDA matches (atomic)
-</div>
-    <p class="tag" style="margin-top: 22px;">Any Solana program CPIs into <code class="inline">mppsol_cpi</code> to atomically <span class="bold">pay for and consume</span> off-chain resources — oracles, KYC, signals — inside one transaction. <span class="orange bold">Solana-only.</span></p>
-    <aside class="notes">
-      <div class="timing">⏱ 0:52–1:11</div>
-      <div class="content">
-        <p>The piece EVM cannot match. <strong>A CPI primitive.</strong> Any Solana program can CPI into <code class="inline">mppsol_cpi</code> to atomically pay for and consume off-chain resources — oracles, KYC, signals — inside one transaction. <strong>EVM has no atomic multi-instruction tx model. Solana-only.</strong></p>
-      </div>
-    </aside>
-  </section>
-
-  <!-- 5: Real proof -->
-  <section class="slide">
-    <div class="eyebrow">Not slideware</div>
-    <h2>Real devnet tx.<br><span class="accent">Finalized.</span></h2>
-    <div class="grid grid-4" style="margin-top: 24px;">
-      <div class="card">
-        <div class="label">Status</div>
-        <div class="value">FINALIZED</div>
-        <div class="sub">slot 460,181,691</div>
-      </div>
-      <div class="card">
-        <div class="label">Compute units</div>
-        <div class="value">17,236</div>
-        <div class="sub">SPL transfer + Memo nonce</div>
-      </div>
-      <div class="card">
-        <div class="label">Fee</div>
-        <div class="value">$0.0008</div>
-        <div class="sub">0.000005 SOL</div>
-      </div>
-      <div class="card">
-        <div class="label">End-to-end</div>
-        <div class="value">~400ms</div>
-        <div class="sub">EVM: 12s+, $0.50+</div>
-      </div>
-    </div>
-    <p class="subline" style="margin-top: 18px;">Agent dev writes <code class="inline">mppFetch(url)</code>. Service dev writes one Hono middleware line. <span class="accent bold">That's the UX.</span></p>
-    <p class="subline mono" style="margin-top: 12px; font-size: 0.78em; word-break: break-all;">
-      explorer.solana.com/tx/<span class="accent">4ycgDjjD9AgM5qT51qwxjvnrerP2VFgP2tn8GFxvWD3tvYprE2jsyjQcQ3ZCjCjcaP34DXdYmKdcbjKAFh9Zf2qJ</span>?cluster=devnet
-    </p>
-    <aside class="notes">
-      <div class="timing">⏱ 1:11–1:31</div>
-      <div class="content">
-        <p>Not slideware. <strong>Real devnet payment, finalized.</strong> Slot four-six-zero million. <strong>Seventeen thousand compute units. Eight-hundredths of a cent in fees. End-to-end about four hundred milliseconds.</strong> EVM equivalent: twelve seconds, fifty cents. <strong>The UX: agent dev writes one <code class="inline">mppFetch</code> call. Service dev writes one middleware line.</strong></p>
-      </div>
-    </aside>
-  </section>
-
-  <!-- 6: What's next -->
-  <section class="slide">
-    <div class="eyebrow">Next</div>
-    <h2>Mainnet, then<br><span class="accent">deep on one merchant pain.</span></h2>
-    <div class="split" style="margin-top: 22px;">
+    <div class="eyebrow">First consumer</div>
+    <h2>soltempo: <span class="accent">Solana DeFi yield<br>account for Tempo merchants.</span></h2>
+    <div class="split" style="margin-top: 18px;">
       <div>
-        <h3 class="accent">1. Mainnet</h3>
+        <h3 class="accent">The problem</h3>
         <ul class="list-clean">
-          <li>Audit + multisig transition of upgrade authority</li>
-          <li>Promote <code class="inline">@mppsol/*</code> to <code class="inline">@latest</code></li>
+          <li>Tempo merchants earn 0% on operating USDC</li>
+          <li>Solana has the deepest stablecoin DeFi (Kamino, Marginfi, Drift)</li>
+          <li>No primitive bridges merchant payments → DeFi yield atomically</li>
         </ul>
       </div>
       <div>
-        <h3 class="accent-2">2. soltempo — first narrow product</h3>
+        <h3 class="accent-2">The flow</h3>
         <ul class="list-clean">
-          <li>Tempo merchant idle USDC → Solana yield via mppsol bridge</li>
-          <li>Auto-bridges above buffer to Kamino; pulls back on payouts</li>
-          <li>One narrow merchant pain. Real distribution.</li>
+          <li>Merchant USDC on Tempo → Buffer.sol</li>
+          <li>Above-buffer auto-bridges via CCIP → Solana vault → Kamino</li>
+          <li>Payouts pull back; each settlement = on-chain Receipt PDA</li>
         </ul>
       </div>
     </div>
-    <p class="subline" style="margin-top: 18px;">Don't build more infra. Solve one merchant pain with depth, then expand.</p>
+    <p class="subline" style="margin-top: 18px;">First narrow product proving the cross-VM thesis end-to-end. <span class="bold accent">Deposit, earn, withdraw — atomically.</span></p>
     <aside class="notes">
-      <div class="timing">⏱ 1:31–1:47</div>
+      <div class="timing">⏱ 1:17–1:39</div>
       <div class="content">
-        <p>What's next. <strong>Mainnet</strong> — audit and multisig. Then the first deep product on top: <strong>soltempo</strong>. Tempo merchants get zero yield today. Soltempo auto-bridges idle USDC to Solana DeFi via mppsol, pulls back on payouts. <strong>One narrow merchant pain.</strong></p>
+        <p>The first consumer: <strong>soltempo</strong>. Tempo merchants today earn zero on operating balances. Soltempo bridges idle USDC to Kamino on Solana for yield, pulls back on demand for payouts. <strong>Each settlement is an on-chain Receipt PDA referencing the Tempo origin.</strong> One narrow merchant pain, one focused product.</p>
+      </div>
+    </aside>
+  </section>
+
+  <!-- 6: Distribution thesis -->
+  <section class="slide">
+    <div class="eyebrow">Why this matters</div>
+    <h2>Stripe brings tradfi.<br>Solana brings DeFi.<br><span class="accent">mppsol is the connector.</span></h2>
+    <p class="tag" style="margin-top: 16px;">Stripe owns tradfi merchant distribution via Tempo. Solana owns DeFi yield distribution via Kamino, Marginfi, Drift. <span class="bold">mppsol is the cross-VM rail. soltempo is the first product to ship on it.</span> Other consumers (telos, future merchants) compose on the same primitive.</p>
+    <aside class="notes">
+      <div class="timing">⏱ 1:39–1:51</div>
+      <div class="content">
+        <p>Why this matters. <strong>Stripe brings tradfi merchant distribution. Solana brings DeFi yield distribution. mppsol is the connector.</strong> soltempo is the first product to ship on it. Other consumers compose on the same primitive.</p>
       </div>
     </aside>
   </section>
@@ -374,20 +357,20 @@ body.notes-on #brand, body.notes-on #hud { bottom: calc(38vh + 12px); }
   <!-- 7: Ask -->
   <section class="slide">
     <div class="eyebrow">Ask</div>
-    <h2>Colosseum accelerator.<br><span class="dim">To mainnet, audit, soltempo.</span></h2>
+    <h2>Colosseum accelerator.<br><span class="dim">Mainnet, audit, soltempo end-to-end.</span></h2>
     <div class="big-stat" style="margin-top: 22px;">
-      <span class="num">109</span><span class="label">tests · 3 npm packages · 2 Anchor programs · 5-doc RFC spec</span>
+      <span class="num">2</span><span class="label">Anchor programs on devnet · 12 tests · soltempo scaffolded · Tempo CCIP wired</span>
     </div>
-    <p class="subline" style="margin-top: 14px;">Open standard, paid hosted infra — nonce/session storage, upgrade-authority custody, settlement batching. <span class="bold accent">Stripe model.</span></p>
+    <p class="subline" style="margin-top: 14px;">Open standard, paid hosted infra — cross-VM relayer ops, settlement batching, merchant treasury SaaS. <span class="bold accent">Stripe model.</span></p>
     <div class="cta-row">
       <a class="pill primary" href="https://mppsol.org">mppsol.org</a>
       <a class="pill" href="https://github.com/mppsol">github.com/mppsol</a>
-      <a class="pill" href="https://www.npmjs.com/package/@mppsol/server">@mppsol on npm</a>
+      <a class="pill" href="https://github.com/mppsol/soltempo">soltempo</a>
     </div>
     <aside class="notes">
-      <div class="timing">⏱ 1:47–2:04</div>
+      <div class="timing">⏱ 1:51–2:03</div>
       <div class="content">
-        <p>The ask. <strong>Colosseum accelerator</strong> — to ship mainnet, audit, and soltempo. <strong>Open standard, paid hosted infra</strong> — nonce/session storage, upgrade-authority custody, settlement batching. <strong>Same model as Stripe.</strong> mppsol.org. github.com/mppsol. <strong>Thank you.</strong></p>
+        <p>The ask. <strong>Colosseum accelerator</strong> — to ship mainnet, audit, and the soltempo end-to-end demo on Tempo testnet. <strong>Open standard, paid hosted infra</strong> — cross-VM relayer operations, settlement batching, merchant treasury SaaS. <strong>Same model as Stripe.</strong> mppsol.org. github.com/mppsol. <strong>Thank you.</strong></p>
       </div>
     </aside>
   </section>

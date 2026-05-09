@@ -1,6 +1,6 @@
-# MPP.sol — 2-min Pitch Speaker Notes
+# MPP.sol — 2-min Pitch Speaker Notes (post-pivot)
 
-Verbatim script for `deck-2min.html`. 7 slides · target runtime ~2:04.
+Verbatim script for `deck-2min.html`. 7 slides · target runtime ~2:03.
 
 Designed to address all six Colosseum judging criteria: (a) functionality, (b) potential impact / TAM, (c) novelty, (d) UX, (e) open-source / composability, (f) business plan.
 
@@ -10,57 +10,57 @@ Bold marks the load-bearing words to emphasize when delivering. Open the deck an
 
 ## Slide 1 — Hook (0:00–0:10)
 
-> Stripe for Solana agents.
+> Stripe-grade payments meet Solana DeFi.
 
-I'm **Hiro**. **MPP.sol is Stripe for Solana agents** — the HTTP 402 standard for machine payments, shipped on Solana. **Direct mode is mainnet-ready today.**
-
----
-
-## Slide 2 — The gap (0:10–0:30)
-
-> Stripe shipped HTTP 402 for AI agents. Solana has no adapter.
-
-Stripe and Tempo just shipped **MPP — HTTP 402 for AI agent payments**. **100+ services in Tempo's payments directory at mainnet — Visa, Cloudflare, Meta already in.** But Solana — the chain Meta actually settles on — has no open adapter. Tempo is captive EVM. The existing Solana effort is experimental. Stripe Crypto and Coinbase are closed stacks.
+I'm **Hiro**. **mppsol is where Stripe-grade payments meet Solana DeFi** — a cross-VM settlement primitive between EVM-based L1s like Tempo and Solana. **soltempo** is the first product on top of it.
 
 ---
 
-## Slide 3 — What I shipped (0:30–0:52)
+## Slide 2 — The gap (0:10–0:35)
 
-> The full Solana stack. Spec → SDK → on-chain.
+> Foundation owns Solana MPP. mppsol owns cross-VM.
 
-Five weeks, solo. **The full Solana stack.** **109 tests, 3 npm packages, 2 Anchor programs on devnet, 5-doc RFC spec at mppsol.org.** All Apache-2.0. **Direct mode is mainnet-ready.**
-
----
-
-## Slide 4 — The moat (0:52–1:11)
-
-> The piece EVM cannot match.
-
-The piece EVM cannot match. **A CPI primitive.** Any Solana program can CPI into `mppsol_cpi` to atomically pay for and consume off-chain resources — oracles, KYC, signals — inside one transaction. **EVM has no atomic multi-instruction tx model. Solana-only.**
+Stripe and Tempo shipped MPP — HTTP 402 for machine payments. The Solana Foundation shipped `@solana/mpp` in March covering Solana-native flows in five languages. What neither covers: **payments originating in EVM contracts — Tempo, Arc, Megaeth — settling atomically on Solana with on-chain receipts.** That's where mppsol lives. Wormhole and CCIP do generic messaging, not settlement primitives.
 
 ---
 
-## Slide 5 — Real proof (1:11–1:31)
+## Slide 3 — Architecture (0:35–0:57)
 
-> Real devnet tx. Finalized.
+> Tempo origin → CCIP → Solana + on-chain Receipt PDA
 
-Not slideware. **Real devnet payment, finalized.** Slot four-six-zero million. **Seventeen thousand compute units. Eight-hundredths of a cent in fees. End-to-end about four hundred milliseconds.** EVM equivalent: twelve seconds, fifty cents. **The UX: agent dev writes one `mppFetch` call. Service dev writes one middleware line.**
-
----
-
-## Slide 6 — Next (1:31–1:47)
-
-> Mainnet, then deep on one merchant pain.
-
-What's next. **Mainnet** — audit and multisig. Then the first deep product on top: **soltempo**. Tempo merchants get zero yield today. Soltempo auto-bridges idle USDC to Solana DeFi via mppsol, pulls back on payouts. **One narrow merchant pain.**
+The flow. A Tempo Solidity contract emits a settlement intent. **Chainlink CCIP — just activated on Tempo this week** — delivers it to Solana. Our Anchor vault receives it and atomically settles via `mppsol_cpi.pay_with_receipt`, emitting a Receipt PDA bound to the EVM origin. **Auditable cross-VM payments, on-chain.**
 
 ---
 
-## Slide 7 — Ask (1:47–2:04)
+## Slide 4 — What ships today (0:57–1:17)
+
+> Solana primitives live on devnet.
+
+What's live today. **Two Solana Anchor programs deployed on devnet** — mppsol_cpi for atomic settlement, mppsol_session for cross-VM session escrow. Twelve Anchor tests passing. The Tempo Solidity contract is scaffolded with real Chainlink CCIP integration. **Mainnet pending audit. End-to-end demo in v0.2 via soltempo.**
+
+---
+
+## Slide 5 — First consumer: soltempo (1:17–1:39)
+
+> Solana DeFi yield account for Tempo merchants.
+
+The first consumer: **soltempo**. Tempo merchants today earn zero on operating balances. Soltempo bridges idle USDC to Kamino on Solana for yield, pulls back on demand for payouts. **Each settlement is an on-chain Receipt PDA referencing the Tempo origin.** One narrow merchant pain, one focused product.
+
+---
+
+## Slide 6 — Distribution thesis (1:39–1:51)
+
+> Stripe brings tradfi. Solana brings DeFi. mppsol is the connector.
+
+Why this matters. **Stripe brings tradfi merchant distribution. Solana brings DeFi yield distribution. mppsol is the connector.** soltempo is the first product to ship on it. Other consumers compose on the same primitive.
+
+---
+
+## Slide 7 — Ask (1:51–2:03)
 
 > Colosseum accelerator.
 
-The ask. **Colosseum accelerator** — to ship mainnet, audit, and soltempo. **Open standard, paid hosted infra** — nonce/session storage, upgrade-authority custody, settlement batching. **Same model as Stripe.** mppsol.org. github.com/mppsol. **Thank you.**
+The ask. **Colosseum accelerator** — to ship mainnet, audit, and the soltempo end-to-end demo on Tempo testnet. **Open standard, paid hosted infra** — cross-VM relayer operations, settlement batching, merchant treasury SaaS. **Same model as Stripe.** mppsol.org. github.com/mppsol. **Thank you.**
 
 ---
 
@@ -72,25 +72,37 @@ The ask. **Colosseum accelerator** — to ship mainnet, audit, and soltempo. **O
 - **Tempo** — "TEM-poh"
 - **CPI** — "C, P, I" (initials)
 - **PDA** — "P, D, A" (initials)
+- **CCIP** — "C, C, I, P" (initials)
 - **Ed25519** — "E-D twenty-five five-nineteen"
 - **Kamino** — "kuh-MEE-noh"
+- **Reth** — "Reth" (one syllable)
 
 ---
 
-## What changed vs. the original 4:20 deck
+## What changed vs. the previous 2-min deck
 
-- **Hook reframed** as "Stripe for Solana agents" (4-word pitch) instead of "Machine Payments Protocol for Solana" (the protocol name).
-- **Cut from 10 → 7 slides.** Removed Why-me (slide 8) and the Status scorecard table (slide 7). Folded key numbers into Slide 3.
-- **Added "Next" slide** featuring soltempo as the first narrow product use case — proves narrow-product thinking, not "we'll ship more infra."
-- **Audience focused.** Pitched primarily at AI-agent dev mindshare; CPI moat positioned as the technical *defense* of the agent pitch on Solana specifically, not as its own audience.
+The previous deck-2min.html pitched mppsol as **"Stripe for Solana agents"** — a Solana MPP adapter. That positioning is now factually wrong:
+
+- The Solana Foundation shipped `@solana/mpp` on **2026-03-18** (5 languages, sessions via Swig, payment channel Anchor program prototyped). Foundation owns the Solana-native HTTP-402 space.
+- Continuing to claim "Solana has no MPP adapter" would damage credibility with judges who follow the Solana Foundation.
+
+The 2026-05-09 strategic pivot repositioned mppsol as **"Settlement layer connecting Stripe-grade payments to Solana DeFi"** — the cross-VM gap that Foundation can't fill (because they're pure Solana).
+
+**Specific framing changes:**
+- Hero: "Stripe for Solana agents" → "Stripe-grade payments meet Solana DeFi"
+- Slide 2 gap: "Solana has no MPP adapter" → "Foundation owns Solana MPP, mppsol owns cross-VM"
+- Slide 4 (was: 109 tests + 3 npm packages + 2 Anchor): now honest about the deprecated TS SDKs (replaced by `@solana/mpp`); leads with the 2 surviving Anchor programs + 12 Anchor tests + Tempo Solidity scaffolded
+- Slide 5 (was: real devnet tx finalized): replaced with soltempo as the first concrete consumer (the proof artifact for the cross-VM thesis)
+- Slide 6 (was: next/soltempo): expanded into the distribution thesis (Stripe tradfi + Solana DeFi)
+- Slide 7 (Ask): updated stats and revenue model framing for the new scope
 
 ## Where each Colosseum criterion lands
 
 | Criterion | Slide(s) |
 | --- | --- |
-| (a) Functionality / code quality | 3 (109 tests, 3 npm, 2 Anchor) + 5 (real devnet tx) |
-| (b) Potential Impact / TAM | 1 ("Stripe for Solana agents") + 2 (Visa, Cloudflare, Meta, 100+ Tempo services) |
-| (c) Novelty | 4 (CPI primitive — Solana-only) |
-| (d) UX | 5 (~400ms E2E, `mppFetch(url)` one-liner, EVM comparison) |
-| (e) Open-source / composability | 3 ("All Apache-2.0") + 4 (CPI composability into any Solana program) |
-| (f) Business Plan | 7 (open standard, paid hosted infra — Stripe model) |
+| (a) Functionality / code quality | 4 (2 Anchor programs deployed, 12 tests passing, Tempo Solidity scaffolded) |
+| (b) Potential Impact / TAM | 1 ("Stripe-grade meets Solana DeFi") + 6 (distribution thesis: Stripe tradfi + Solana DeFi) |
+| (c) Novelty | 2 (the cross-VM gap nobody else fills) + 3 (architecture: only on-chain Receipt PDA bound to EVM origin) |
+| (d) UX | 5 (soltempo merchant UX: deposit, earn, withdraw atomically) + 3 (atomic settlement implies clean UX) |
+| (e) Open-source / composability | 4 ("All Apache-2.0") + 6 (composability: other consumers like telos compose on same primitive) |
+| (f) Business Plan | 7 (open standard, paid hosted infra: cross-VM relayer ops, settlement batching, merchant treasury SaaS — Stripe model) |
