@@ -1,13 +1,13 @@
-<!-- Drop this into a new `mppsol/.github` repo at `profile/README.md`.
+<!-- Drop this into mppsol/.github at profile/README.md.
      GitHub renders it as the public landing for github.com/mppsol. -->
 
 # MPP.sol
 
-**Machine Payments Protocol — on Solana.**
+**Settlement layer connecting Stripe-grade payments to Solana DeFi.**
 
-Stripe + Tempo Labs co-authored [MPP](https://docs.stripe.com/payments/machine/mpp) — the IETF-draft formalization of HTTP `402 Payment Required` for machine-to-machine payments. Production settlement methods today: Tempo (EVM L1), Stripe cards, Lightning. **MPP.sol adds Solana** — and adds a CPI primitive that no other MPP adapter has.
+Stripe brings tradfi merchant distribution. Solana brings DeFi yield distribution. mppsol connects them via on-chain Solana primitives and cross-VM settlement intents originating in EVM contracts.
 
-🌐 **[mppsol.org](https://mppsol.org)** · 📦 **[@mppsol on npm](https://www.npmjs.com/org/mppsol)** · 🔗 **Devnet deployed** · ⚖️ **Apache-2.0**
+🌐 **[mppsol.org](https://mppsol.org)** · 🔗 **Devnet deployed** · ⚖️ **Apache-2.0**
 
 ---
 
@@ -15,22 +15,24 @@ Stripe + Tempo Labs co-authored [MPP](https://docs.stripe.com/payments/machine/m
 
 | Repo | What it is |
 | --- | --- |
-| **[spec](https://github.com/mppsol/spec)** | RFC-style spec (5 docs) + landing site at mppsol.org |
-| **[sdk](https://github.com/mppsol/sdk)** | TypeScript SDK monorepo: [`@mppsol/core`](https://www.npmjs.com/package/@mppsol/core) (shared types + canonical encodings), [`@mppsol/server`](https://www.npmjs.com/package/@mppsol/server) (HTTP middleware, Hono adapter), [`@mppsol/agent`](https://www.npmjs.com/package/@mppsol/agent) (client SDK with a single `mppFetch()` call) |
-| **[cpi](https://github.com/mppsol/cpi)** | Two Anchor programs: `mppsol_session` (escrow + Ed25519 batch settle) and `mppsol_cpi` (the CPI primitive) |
+| **[spec](https://github.com/mppsol/spec)** | Cross-VM settlement spec + landing site at mppsol.org |
+| **[cpi](https://github.com/mppsol/cpi)** | Two Anchor programs deployed on devnet: `mppsol_session` (cross-VM session escrow) and `mppsol_cpi` (atomic settlement primitive) |
+| **[soltempo](https://github.com/mppsol/soltempo)** | First consumer — Solana DeFi yield account for Tempo merchants |
+| **[sdk](https://github.com/mppsol/sdk)** | **Deprecated.** TS packages (`@mppsol/core`, `@mppsol/server`, `@mppsol/agent`). Use [`@solana/mpp`](https://github.com/solana-foundation/mpp-sdk) for HTTP-402 work. |
 
 ---
 
-## Status — v0.1.1
+## Status — v0.1
 
 | | |
 | --- | --- |
-| **Direct mode** (one-shot HTTP 402 payment) | ✅ mainnet-shippable today |
-| **Session program** (`Open` / `Topup` / `Revoke` / `Settle` / `Close`) | ✅ on Solana devnet |
-| **CPI primitive** (7 instructions, including v0.1.1 Receipt PDAs) | ✅ on Solana devnet |
-| **Atomic on-chain payment-binding** (was v0.2 — shipped early as v0.1.1) | ✅ `pay_with_receipt` + `verify_paid_result_with_receipt` + `claim_receipt` |
-| **Tests** | ✅ 109 passing across the org (37 core + 40 server + 20 agent + 12 Anchor) |
-| **Mainnet deployment** | ⏳ pending audit + multisig transition of upgrade authority |
+| **`mppsol_session`** Anchor program | ✅ on Solana devnet |
+| **`mppsol_cpi`** Anchor program | ✅ on Solana devnet |
+| Anchor tests | ✅ 12 passing |
+| Tempo-side Solidity contracts | ⏳ planned v0.2 |
+| Chainlink CCIP integration | ⏳ planned v0.2 |
+| End-to-end cross-VM demo (via soltempo) | ⏳ planned v0.2 |
+| Mainnet deployment | ⏳ pending audit + multisig transition |
 
 ### Devnet program IDs
 
@@ -41,32 +43,25 @@ IDLs are uploaded on-chain — fetch via `Program.fetchIdl(programId, provider)`
 
 ---
 
-## Why Solana
+## Why this exists
 
-- ~400 ms confirmation, sub-cent fees, deep native USDC liquidity.
-- Largest deployed base of agents, bots, and on-chain automation — the explicit MPP use case.
-- SPL token accounts and PDAs map cleanly onto MPP's session model.
-- **Atomic multi-instruction transactions + the Ed25519 precompile pattern** make off-chain-signed message verification cheap on-chain — the structural reason Solana programs can become MPP consumers via CPI, and the structural reason EVM-based MPP adapters (Tempo included) cannot match it.
+[Stripe + Tempo Labs](https://docs.stripe.com/payments/machine/mpp) shipped MPP — the IETF-draft HTTP 402 standard for machine payments. The [Solana Foundation](https://github.com/solana-foundation/mpp-sdk) shipped `@solana/mpp` for Solana-native HTTP-402 flows.
 
----
+What neither covers: **payments originating in EVM contracts and settling atomically on Solana with verifiable on-chain receipts.** mppsol fills that gap.
 
-## Quickstart
-
-```sh
-# Server side — drop-in middleware for any Hono/Express handler
-npm install @mppsol/server@next hono
-
-# Client side — single mppFetch() call from your agent
-npm install @mppsol/agent@next
-```
-
-Full ~60-second walkthrough in [`spec/DEMO.md`](https://github.com/mppsol/spec/blob/main/DEMO.md).
+Tempo merchants get distribution from Stripe. Solana DeFi has yield. mppsol is the connector — and [soltempo](https://github.com/mppsol/soltempo) is the first concrete product built on it.
 
 ---
 
-## Relationship to upstream MPP
+## Relationship to `@solana/mpp`
 
-MPP.sol implements the MPP wire protocol as defined by Stripe and Tempo Labs. We track the IETF draft and intend to propose a Solana settlement-method registration once the spec stabilizes.
+`@solana/mpp` owns Solana-native HTTP-402 payments. mppsol owns cross-VM settlement. They compose for users who need both.
+
+| Layer | Owner |
+| --- | --- |
+| HTTP 402 wire protocol on Solana | `@solana/mpp` (Foundation) |
+| Cross-VM settlement (EVM ↔ Solana) | mppsol |
+| Cross-chain messaging | Chainlink CCIP |
 
 ## License & maintainer
 

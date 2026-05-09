@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>MPP.sol — Machine Payments Protocol for Solana</title>
-<meta name="description" content="MPP.sol brings Stripe + Tempo Labs' Machine Payments Protocol (HTTP 402) to Solana. Direct-mode shippable on mainnet today; session program live on devnet.">
-<meta property="og:title" content="MPP.sol — Machine Payments Protocol for Solana">
-<meta property="og:description" content="HTTP 402 + Solana USDC, with an on-chain CPI primitive nobody else has.">
+<title>MPP.sol — Settlement layer connecting Stripe-grade payments to Solana DeFi</title>
+<meta name="description" content="mppsol bridges payment intents originating in EVM L1s (Tempo, Arc, Megaeth) to atomic settlement on Solana, with on-chain Receipt PDAs proving the cross-VM flow.">
+<meta property="og:title" content="MPP.sol — Settlement layer connecting Stripe-grade payments to Solana DeFi">
+<meta property="og:description" content="The connector between Stripe's tradfi merchant distribution and Solana's DeFi yield distribution. On-chain primitives deployed on Solana devnet; cross-VM demo via soltempo coming in v0.2.">
 <meta property="og:url" content="https://mppsol.org">
 <style>
 :root {
@@ -60,8 +60,10 @@ p { margin: 0 0 14px; color: var(--fg-dim); }
 .status-table th { color: var(--fg-faint); font-weight: 500; font-size: 0.82em; text-transform: uppercase; letter-spacing: 0.08em; }
 .status-table .ok { color: var(--accent); }
 .status-table .pending { color: #FFB800; }
+.status-table .deprecated { color: var(--fg-faint); text-decoration: line-through; }
 .status-table code { font-size: 0.85em; }
 .tag-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.75em; background: var(--bg-soft); color: var(--fg-dim); border: 1px solid var(--border); margin-right: 4px; }
+.tag-pill.deprecated { color: #FFB800; border-color: #4a3a18; background: #1a1410; }
 footer { padding: 40px 0; color: var(--fg-faint); font-size: 0.88em; text-align: center; }
 footer a { color: var(--fg-dim); }
 .ascii { font-family: "SF Mono", Menlo, monospace; white-space: pre; font-size: 0.78em; line-height: 1.4; color: var(--fg-dim); padding: 20px; background: var(--code-bg); border-radius: 6px; border: 1px solid var(--border); overflow-x: auto; margin-top: 14px; }
@@ -73,163 +75,111 @@ footer a { color: var(--fg-dim); }
 
 <header class="hero">
   <div class="brand">MPP.sol</div>
-  <h1>Machine Payments Protocol<br>for Solana</h1>
+  <h1>Settlement layer connecting<br>Stripe-grade payments<br>to Solana DeFi.</h1>
   <p class="tag">
-    Stripe + Tempo Labs' IETF-draft HTTP <code>402 Payment Required</code>
-    standard, settled in Solana USDC. <strong>Direct-mode shippable on mainnet today.</strong>
-    On-chain session program + CPI primitive live on devnet.
+    Stripe brings tradfi merchant distribution. Solana brings DeFi yield distribution. <strong>mppsol is the connector</strong> — atomic on-chain settlement for payments originating in EVM contracts.
   </p>
   <div class="cta">
-    <a class="btn btn-primary" href="#quickstart">Quickstart</a>
+    <a class="btn btn-primary" href="#architecture">Architecture</a>
     <a class="btn btn-secondary" href="https://github.com/mppsol">GitHub</a>
-    <a class="btn btn-secondary" href="https://www.npmjs.com/package/@mppsol/server">npm</a>
+    <a class="btn btn-secondary" href="https://github.com/mppsol/soltempo">soltempo (first consumer)</a>
     <a class="btn btn-secondary" href="spec/wire.md">Spec</a>
   </div>
   <div class="badges">
-    <span>109 tests passing</span>
-    <span>3 Solana programs deployed on devnet</span>
+    <span>2 Anchor programs deployed on Solana devnet</span>
+    <span>v0.2 cross-VM demo coming via soltempo</span>
     <span>Apache-2.0</span>
   </div>
 </header>
 
 <section id="why">
-<h2>Why MPP.sol exists</h2>
+<h2>Why this exists</h2>
 <p>
-  Stripe and Tempo Labs co-authored the Machine Payments Protocol — an
-  IETF-draft formalization of HTTP <code>402</code> for machine-to-machine
-  payments. Production settlement methods today: Tempo (their EVM L1),
-  Stripe cards, Lightning. <strong>Not Solana.</strong>
+  <a href="https://docs.stripe.com/payments/machine/mpp">Stripe and Tempo Labs</a> shipped the Machine Payments Protocol — the IETF-draft HTTP <code>402</code> standard for machine payments. The <a href="https://github.com/solana-foundation/mpp-sdk">Solana Foundation</a> shipped <code>@solana/mpp</code> as the official Solana implementation in March 2026, covering Solana-native HTTP-402 flows in five languages.
 </p>
 <p>
-  Solana is the highest-throughput L1 with deep USDC liquidity, sub-cent
-  fees, and the largest deployed base of agents and on-chain automation.
-  MPP.sol adds Solana as a settlement adapter — and adds something no
-  other MPP adapter has: a <strong>CPI primitive</strong> that lets one
-  Solana program atomically pay for and consume an off-chain MPP-priced
-  resource via cross-program invocation.
+  What neither covers: <strong>payments that originate in EVM contracts and need to settle atomically on Solana with verifiable on-chain receipts</strong>. mppsol fills that gap with on-chain Anchor programs plus a Solidity contract pattern, composed over a real cross-chain bridge (Chainlink CCIP).
 </p>
 <p>
-  EVM-based MPP adapters can't match the CPI primitive — Solana's
-  atomic multi-instruction transaction model and Ed25519 precompile
-  pattern make off-chain-signed message verification cheap on-chain in
-  ways EVM doesn't.
+  The distribution thesis: Stripe owns tradfi merchant distribution; Solana owns DeFi yield distribution. mppsol is the connector. <a href="https://github.com/mppsol/soltempo">soltempo</a> is the first concrete consumer — Solana DeFi yield account for Tempo merchants, demonstrating the thesis end-to-end.
 </p>
 </section>
 
 <section id="architecture">
 <h2>Architecture</h2>
-<div class="ascii">                              client
-                                │
-                                ▼
-                          ┌─────────────┐
-                          │   server    │  Hono / FastAPI middleware
-                          │  402 ──────►│  emits Solana payment challenge
-                          └─────────────┘
-                                │
-              client builds + signs Solana tx
-              (USDC transfer + Memo nonce binding)
-                                │
-                                ▼
-                          ┌─────────────┐
-                          │   Solana    │  optional on-chain composition:
-                          │ mppsol_*    │  mppsol_session escrow + debits,
-                          │  programs   │  mppsol_cpi for atomic
-                          └─────────────┘  pay-and-consume in other programs</div>
+<div class="ascii">   ┌──────────────────────┐
+   │  Tempo / Arc / etc.  │   EVM L1 (Reth-based)
+   │   Solidity contract  │   emits cross-VM settlement intent
+   └──────────┬───────────┘
+              │
+              ▼
+   ┌──────────────────────┐
+   │   Chainlink CCIP     │   cross-chain message
+   └──────────┬───────────┘
+              │
+              ▼
+   ┌──────────────────────┐
+   │   mppsol_cpi         │   atomically receives + settles
+   │   (Solana Anchor)    │   emits Receipt PDA bound to origin
+   └──────────────────────┘</div>
 
 <div class="grid-2" style="margin-top: 32px;">
   <div class="card">
-    <h3>solana-direct (one-shot)</h3>
-    <p>Each request gets a fresh Solana tx: USDC transfer to the server's
-    token account + Memo with the server's nonce. <strong>No on-chain program
-    required.</strong> Mainnet-shippable today.</p>
+    <h3>mppsol_session</h3>
+    <p>Solana Anchor program for cross-VM session payments. EVM-side payer pre-authorizes a Solana-side spending budget; off-chain debits batched and settled on-chain via Ed25519 voucher verification. <strong>Live on devnet.</strong></p>
   </div>
   <div class="card">
-    <h3>solana-session (streaming)</h3>
-    <p>Open a session PDA on-chain with escrowed USDC + an authorized signer
-    key. Sign 104-byte off-chain debits per request; server batches and
-    settles on-chain. Sub-cent per-request marginal cost.</p>
+    <h3>mppsol_cpi</h3>
+    <p>Solana Anchor program for atomic settlement. Other Solana programs CPI into it to receive cross-VM payment intents and emit Receipt PDAs that bind the settlement to its EVM origin. <strong>Live on devnet.</strong></p>
   </div>
   <div class="card">
-    <h3>CPI primitive</h3>
-    <p>Other Solana programs CPI into <code>mppsol_cpi</code> to pay for
-    off-chain resources atomically. The novel piece — EVM MPP adapters
-    can't do this.</p>
+    <h3>Tempo Solidity contract</h3>
+    <p>Standardized cross-VM settlement intent emitter. Lives on Tempo (or any Reth-based EVM L1). <strong>v0.2 — coming.</strong></p>
   </div>
   <div class="card">
-    <h3>Spec-conformant</h3>
-    <p>Implements the IETF-draft wire format faithfully. Will upstream a
-    Solana settlement-method registration once the spec stabilizes.</p>
+    <h3>CCIP integration</h3>
+    <p>Bridge messaging via Chainlink CCIP — the canonical cross-chain rail Tempo activated at mainnet. <strong>v0.2 — coming.</strong></p>
   </div>
 </div>
 </section>
 
-<section id="quickstart">
-<h2>Quickstart — pay your first 402 in ~60 seconds</h2>
-<p>Spin up a paid endpoint, then pay it. Both halves use a real Solana devnet payment in USDC.</p>
-
-<h3>1. Run the server (terminal 1)</h3>
-<pre><code>git clone https://github.com/mppsol/server
-cd server
-npm install hono @hono/node-server
-export MPPSOL_RECIPIENT=&lt;your-devnet-USDC-token-account&gt;
-bun run examples/hono.ts
-# Listening on http://localhost:3000</code></pre>
-
-<h3>2. Pay it (terminal 2)</h3>
-<pre><code>git clone https://github.com/mppsol/agent
-cd agent
-npm install @solana/web3.js @solana/spl-token bs58
-export MY_USDC_ATA=&lt;your-devnet-USDC-token-account&gt;
-bun run examples/pay-direct.ts
-# → Status: 200
-# → Body: Why don't scientists trust atoms? Because they make up everything.
-# → Receipt: Payment scheme="solana-direct", tx="...", slot="..."</code></pre>
-
-<h3>3. (optional) Try session mode</h3>
-<pre><code># Open a session PDA on devnet with 1 USDC escrowed
-git clone https://github.com/mppsol/cpi
-cd cpi && export MPP_SERVER_PUBKEY=&lt;server-wallet&gt;
-bun run examples/open-session.ts
-
-# Then pay against it from the agent
-cd ../agent
-export MPPSOL_SESSION=&lt;from-above&gt;
-export SIGNER=../cpi/authorized-signer.json
-bun run examples/pay-session.ts</code></pre>
-</section>
-
-<section id="repos">
-<h2>Components</h2>
+<section id="relationship">
+<h2>Relationship to <code>@solana/mpp</code></h2>
+<p>
+  <code>@solana/mpp</code> owns Solana-native HTTP-402 payments. mppsol owns cross-VM settlement. They compose for users who need both.
+</p>
 <table class="status-table">
   <thead>
-    <tr><th>Package</th><th>What it is</th><th>Status</th></tr>
+    <tr><th>Layer</th><th>Owner</th></tr>
   </thead>
   <tbody>
-    <tr>
-      <td><a href="https://github.com/mppsol/spec"><code>@mppsol/spec</code></a></td>
-      <td>RFC-style spec (5 docs)</td>
-      <td class="ok">v0.1 frozen</td>
-    </tr>
-    <tr>
-      <td><a href="https://www.npmjs.com/package/@mppsol/core"><code>@mppsol/core</code></a></td>
-      <td>Shared types + canonical encodings</td>
-      <td class="ok">on npm</td>
-    </tr>
-    <tr>
-      <td><a href="https://www.npmjs.com/package/@mppsol/server"><code>@mppsol/server</code></a></td>
-      <td>HTTP middleware (Hono adapter)</td>
-      <td class="ok">on npm — direct mode mainnet-ready</td>
-    </tr>
-    <tr>
-      <td><a href="https://www.npmjs.com/package/@mppsol/agent"><code>@mppsol/agent</code></a></td>
-      <td>Client SDK (<code>mppFetch</code>)</td>
-      <td class="ok">on npm</td>
-    </tr>
-    <tr>
-      <td><a href="https://github.com/mppsol/cpi"><code>@mppsol/cpi</code></a></td>
-      <td>Two on-chain Anchor programs</td>
-      <td class="ok">deployed devnet</td>
-    </tr>
+    <tr><td>HTTP 402 wire protocol on Solana</td><td><code>@solana/mpp</code> (Foundation)</td></tr>
+    <tr><td>Solana payment session SDK</td><td><code>@solana/mpp</code></td></tr>
+    <tr><td><strong>Cross-VM settlement (EVM ↔ Solana)</strong></td><td><strong>mppsol</strong></td></tr>
+    <tr><td>Cross-chain messaging</td><td><a href="https://chain.link/cross-chain">Chainlink CCIP</a></td></tr>
+  </tbody>
+</table>
+<p style="margin-top: 18px;">
+  mppsol does not depend on <code>@solana/mpp</code> at v0.1 (on-chain Anchor programs only — no npm dependency surface). A v0.2 TS SDK will depend on it (pinned exact version, types wrapped) where the cross-VM flow needs HTTP-402 composition.
+</p>
+</section>
+
+<section id="status">
+<h2>v0.1 status — honest scorecard</h2>
+<table class="status-table">
+  <thead>
+    <tr><th>Capability</th><th>Status</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><code>mppsol_session</code> Anchor program</td><td class="ok">✓ on devnet</td><td>PDA escrow, Ed25519 batched settle, Open/Settle/Topup/Revoke/Close lifecycle</td></tr>
+    <tr><td><code>mppsol_cpi</code> Anchor program</td><td class="ok">✓ on devnet</td><td>Atomic settlement + Receipt PDA emission</td></tr>
+    <tr><td>Anchor tests</td><td class="ok">✓ 12 passing</td><td>Localnet integration suite</td></tr>
+    <tr><td>Spec documents</td><td class="pending">⚠ being rewritten</td><td>Currently HTTP-402-era; cross-VM rewrite in progress</td></tr>
+    <tr><td>Tempo Solidity contracts</td><td class="pending">⏳ planned v0.2</td><td>Standardized cross-VM intent emitter</td></tr>
+    <tr><td>Chainlink CCIP integration</td><td class="pending">⏳ planned v0.2</td><td>Bridge messaging layer</td></tr>
+    <tr><td>End-to-end cross-VM demo</td><td class="pending">⏳ planned v0.2</td><td>Via <a href="https://github.com/mppsol/soltempo">soltempo</a></td></tr>
+    <tr><td><code>@mppsol/core</code>, <code>/server</code>, <code>/agent</code> npm packages</td><td class="pending">⚠ deprecated</td><td>Use <code>@solana/mpp</code>. Packages remain published at <code>0.1.0-draft.4</code> for existing consumers.</td></tr>
+    <tr><td>Mainnet Anchor deployment</td><td class="pending">⏳ pending</td><td>Audit + multisig transition of upgrade authority</td></tr>
   </tbody>
 </table>
 </section>
@@ -255,29 +205,45 @@ bun run examples/pay-session.ts</code></pre>
     </tr>
   </tbody>
 </table>
+<p style="margin-top: 14px; font-size: 0.9em;">IDLs are uploaded on-chain — fetch via <code>Program.fetchIdl(programId, provider)</code>.</p>
 </section>
 
-<section id="status">
-<h2>v0.1 readiness — honest scorecard</h2>
+<section id="repos">
+<h2>Repositories</h2>
 <table class="status-table">
   <thead>
-    <tr><th>Capability</th><th>Status</th><th>Notes</th></tr>
+    <tr><th>Repo</th><th>What it is</th><th>Status</th></tr>
   </thead>
   <tbody>
-    <tr><td>HTTP 402 wire protocol</td><td class="ok">✓ shipped</td><td>104-byte canonical debit, parser/serializer, 37 core tests</td></tr>
-    <tr><td>Direct mode (one-shot payments)</td><td class="ok">✓ mainnet-ready</td><td>40 server tests covering 8 error codes</td></tr>
-    <tr><td>Session program (Open/Topup/Revoke/Settle/Close)</td><td class="ok">✓ on devnet</td><td>Full Ed25519 batched settle path</td></tr>
-    <tr><td>CPI primitive (7 instructions, incl. v0.1.1 receipt-account variants)</td><td class="ok">✓ on devnet</td><td>12 anchor tests passing across both programs</td></tr>
-    <tr><td>Atomic on-chain payment-binding (Receipt PDAs — was v0.2)</td><td class="ok">✓ shipped v0.1.1</td><td><code>pay_with_receipt</code> · <code>verify_paid_result_with_receipt</code> · <code>claim_receipt</code></td></tr>
-    <tr><td>npm publish (3 packages)</td><td class="ok">✓ live</td><td>Install with <code>@next</code> tag</td></tr>
-    <tr><td>GitHub Actions CI</td><td class="ok">✓ green</td><td>Node 20 + 22 matrix on all TS repos</td></tr>
-    <tr><td>Mainnet on-chain deployment</td><td class="pending">⏳ pending</td><td>Audit + multisig transition of upgrade authority</td></tr>
+    <tr>
+      <td><a href="https://github.com/mppsol/spec"><code>mppsol/spec</code></a></td>
+      <td>This repo — cross-VM settlement spec + landing site at mppsol.org</td>
+      <td class="ok">active</td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/mppsol/cpi"><code>mppsol/cpi</code></a></td>
+      <td>Two Anchor programs deployed on devnet</td>
+      <td class="ok">active</td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/mppsol/soltempo"><code>mppsol/soltempo</code></a></td>
+      <td>First consumer — Solana DeFi yield account for Tempo merchants</td>
+      <td class="ok">scaffolded · v0.1 in build</td>
+    </tr>
+    <tr>
+      <td><a href="https://github.com/mppsol/sdk"><code>mppsol/sdk</code></a></td>
+      <td>TS packages — use <code>@solana/mpp</code> instead</td>
+      <td class="pending">deprecated</td>
+    </tr>
   </tbody>
 </table>
 </section>
 
 <section id="links">
 <h2>Spec docs</h2>
+<p style="margin-bottom: 18px; font-size: 0.95em;">
+  <em>The v0.1 specs were written for the HTTP-402-on-Solana framing and are being migrated to match the cross-VM positioning. Treat current content as historical reference until the rewrite ships.</em>
+</p>
 <div class="grid-2">
   <a class="card" href="spec/wire.md"><h3>wire.md</h3><p>HTTP header format, both settlement schemes, Ed25519 signing.</p></a>
   <a class="card" href="spec/session.md"><h3>session.md</h3><p>On-chain session program: PDA layout, instruction set, lifecycle.</p></a>

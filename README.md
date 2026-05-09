@@ -1,117 +1,95 @@
 # MPP.sol
 
-Machine Payments Protocol — Solana settlement adapter and CPI primitive.
+**Settlement layer connecting Stripe-grade payments to Solana DeFi.**
 
-## What
+mppsol bridges payment intents originating in EVM-based L1s (Tempo, Arc, Megaeth) to atomic settlement on Solana, with on-chain Receipt PDAs proving the cross-VM flow. It's the connector between Stripe's tradfi merchant distribution and Solana's DeFi yield distribution.
 
-[MPP](https://docs.stripe.com/payments/machine/mpp) is a protocol co-authored
-by Stripe and Tempo Labs (IETF draft) that formalizes HTTP `402 Payment
-Required` for machine-to-machine payments. Flow:
+## Why this exists
 
-1. Client requests a resource.
-2. Server returns `402` with a `WWW-Authenticate: Payment` challenge.
-3. Client pays via any supported method.
-4. Client retries with an `Authorization: Payment` header.
-5. Server returns the resource plus a `Payment-Receipt` header.
+[Stripe + Tempo Labs](https://docs.stripe.com/payments/machine/mpp) shipped MPP — the IETF-draft HTTP 402 standard for machine payments. The [Solana Foundation](https://github.com/solana-foundation/mpp-sdk) shipped `@solana/mpp` as the official Solana implementation on 2026-03-18, covering Solana-native HTTP-402 flows in 5 languages.
 
-MPP is settlement-agnostic. Production methods today are Tempo, Stripe
-(card/wallet), and Lightning. This project adds Solana.
+What neither covers: **payments that originate in EVM contracts and need to settle atomically on Solana with verifiable on-chain receipts.** mppsol fills that gap with on-chain Anchor programs plus a Solidity contract pattern, composed over a real cross-chain bridge (Chainlink CCIP).
 
-## Why Solana
+The distribution thesis: Stripe owns tradfi merchant distribution. Solana owns DeFi yield distribution. mppsol is the connector between them, with [soltempo](https://github.com/mppsol/soltempo) as the first concrete consumer.
 
-- ~400ms confirmation, sub-cent fees, deep native USDC liquidity.
-- Largest deployed base of agents, bots, and on-chain automation.
-- SPL token accounts and PDAs map cleanly onto MPP's session model.
-- Solana programs themselves can become MPP consumers — no other MPP
-  adapter exposes the protocol as an on-chain composable primitive.
+## Architecture
 
-## Scope
+```
+   ┌──────────────────────┐
+   │  Tempo / Arc / etc.  │   EVM L1 (Reth-based)
+   │   Solidity contract  │   emits cross-VM settlement intent
+   └──────────┬───────────┘
+              │
+              ▼
+   ┌──────────────────────┐
+   │   Chainlink CCIP     │   cross-chain message
+   └──────────┬───────────┘
+              │
+              ▼
+   ┌──────────────────────┐
+   │   mppsol_cpi         │   atomically receives + settles
+   │   (Solana Anchor)    │   emits Receipt PDA bound to origin
+   └──────────────────────┘
+```
 
-This repo (`mppsol/spec`) holds the specification. Reference implementations:
+## What ships today (v0.1)
 
-| Repo | Purpose |
+- **`mppsol_session`** — Solana Anchor program for cross-VM session payments. EVM-side payer pre-authorizes a Solana-side spending budget; off-chain debits batched and settled on-chain via Ed25519 voucher verification.
+- **`mppsol_cpi`** — Solana Anchor program for atomic settlement. Other Solana programs CPI into it to receive cross-VM payment intents and emit Receipt PDAs.
+- Both deployed on Solana devnet. 12 Anchor tests passing.
+
+## What's coming (v0.2)
+
+- Tempo-side Solidity contracts emitting standardized cross-VM settlement intents
+- Chainlink CCIP integration for bridge messaging
+- End-to-end demo via [soltempo](https://github.com/mppsol/soltempo): Tempo contract initiates → CCIP message → Solana program receives → atomic settlement with Receipt PDA referencing the Tempo origin
+
+## Relationship to `@solana/mpp`
+
+`@solana/mpp` owns Solana-native HTTP-402 payments. mppsol owns cross-VM settlement. They compose for users who need both.
+
+| Layer | Owner |
 | --- | --- |
-| [`mppsol/sdk`](https://github.com/mppsol/sdk) | TypeScript SDK monorepo. Contains `packages/core` (shared types, receipt format, session schema), `packages/server` (HTTP middleware emitting MPP `402` and verifying Solana settlement), and `packages/agent` (client SDK for agents holding Solana USDC). |
-| [`mppsol/cpi`](https://github.com/mppsol/cpi) | Solana program exposing MPP semantics as a CPI target. |
+| HTTP 402 wire protocol on Solana | [`@solana/mpp`](https://github.com/solana-foundation/mpp-sdk) (Foundation) |
+| Solana payment session SDK | `@solana/mpp` |
+| **Cross-VM settlement (EVM ↔ Solana)** | **mppsol** |
+| Cross-chain messaging | [Chainlink CCIP](https://chain.link/cross-chain) |
 
-## Specification contents
+mppsol does not depend on `@solana/mpp` at v0.1 (on-chain Anchor programs only). A v0.2 TS SDK will depend on it (pinned exact version, types wrapped) for HTTP-402 composition where the cross-VM flow needs it.
 
-- [`spec/wire.md`](spec/wire.md) — Solana-specific encoding of the MPP
-  `Authorization` and `Payment-Receipt` headers.
-- [`spec/session.md`](spec/session.md) — On-chain session program: PDA
-  layout, authorization caps, debit semantics, revocation.
-- `spec/settlement.md` — One-shot vs. session settlement, confirmation
-  semantics, reorg handling (none in practice on Solana mainnet).
-- `spec/cpi.md` — CPI interface: how a Solana program invokes MPP for an
-  off-chain resource and surfaces the receipt as a verifiable account.
-- `spec/security.md` — Replay protection, session expiry, oracle/feed
-  pricing risks, multi-signer agents.
+## Repositories
 
-## Status
+| Repo | What it is |
+| --- | --- |
+| [`mppsol/spec`](https://github.com/mppsol/spec) | This repo — cross-VM settlement spec + landing site at mppsol.org |
+| [`mppsol/cpi`](https://github.com/mppsol/cpi) | The two Anchor programs deployed on Solana devnet |
+| [`mppsol/soltempo`](https://github.com/mppsol/soltempo) | First consumer — Solana DeFi yield account for Tempo merchants |
+| [`mppsol/sdk`](https://github.com/mppsol/sdk) | **Deprecated.** TS packages (`@mppsol/core`, `@mppsol/server`, `@mppsol/agent`) at `0.1.0-draft.4`. Use [`@solana/mpp`](https://github.com/solana-foundation/mpp-sdk) instead for HTTP-402 work. Packages remain published for existing consumers; no new development. |
 
-**v0.1 draft. Spec frozen for v0.1; reference implementations vary in
-maturity.** Breaking changes possible before v1.0.
+## Spec docs (under rewrite)
 
-### Specs
+The v0.1 spec documents under [`spec/`](spec/) currently describe the original HTTP-402-on-Solana framing. They are being rewritten to match the cross-VM positioning. Treat the current content as historical reference until the rewrite ships.
 
 | Document | Status |
 | --- | --- |
-| [`wire.md`](spec/wire.md) — HTTP header format | ✅ v0.1 |
-| [`session.md`](spec/session.md) — on-chain session program | ✅ v0.1 |
-| [`cpi.md`](spec/cpi.md) — CPI primitive | ✅ v0.1 |
-| [`settlement.md`](spec/settlement.md) — operator guidance | ✅ v0.1 |
-| [`security.md`](spec/security.md) — threat model | ✅ v0.1 |
+| `wire.md` — HTTP header format | v0.1 (HTTP-402 era — to be migrated to `@solana/mpp` reference) |
+| `session.md` — on-chain session program | v0.1 (still relevant — mppsol_session is the cross-VM session primitive) |
+| `cpi.md` — CPI primitive | v0.1 (still relevant — mppsol_cpi is the cross-VM settlement primitive) |
+| `settlement.md` — operator guidance | v0.1 (still relevant) |
+| `security.md` — threat model | v0.1 (still relevant; cross-VM-specific threats added in v0.2 spec) |
 
-### Reference implementations
+## Status summary
 
-| Spec | TS | Rust | Buildable | Deployed |
-| --- | --- | --- | --- | --- |
-| `wire.md` | ✅ [`@mppsol/core`](https://www.npmjs.com/package/@mppsol/core) | n/a | ✅ | ✅ npm |
-| `session.md` | ✅ off-chain (server + agent) | ⚠️ Open/Topup/Revoke full; Settle/Close stubs | ❌ blocked | ❌ |
-| `cpi.md` | n/a (caller programs are Rust) | ⚠️ Pay full; rest stubs | ❌ blocked | ❌ |
-| `settlement.md` | n/a (advisory) | n/a | n/a | n/a |
-| `security.md` | n/a (advisory) | n/a | n/a | n/a |
+| | |
+| --- | --- |
+| Solana Anchor programs | ✅ deployed on devnet |
+| 12 Anchor tests | ✅ passing |
+| Tempo Solidity contracts | ⏳ planned for v0.2 |
+| CCIP integration | ⏳ planned for v0.2 |
+| First-consumer demo (soltempo) | ⏳ scaffolded, end-to-end demo planned for v0.2 |
+| Mainnet deployment | ⏳ pending audit + multisig transition of upgrade authority |
+| Spec rewrite | ⏳ in progress |
 
-### What you can do today
+## License & maintainer
 
-- ✅ **`solana-direct` mode (one-shot HTTP 402 payment) is shippable.**
-  Pay an MPP-priced API on Solana mainnet using
-  [`@mppsol/server`](https://www.npmjs.com/package/@mppsol/server) +
-  [`@mppsol/agent`](https://www.npmjs.com/package/@mppsol/agent). No
-  on-chain program required.
-- ❌ **`solana-session` mode** requires `mppsol_session` to be deployed
-  on-chain. The off-chain code is implemented and tested, but the
-  on-chain anchor doesn't exist yet.
-- ❌ **CPI primitive** requires `mppsol_cpi` to be deployed. Not yet.
-
-The on-chain piece ([`mppsol/cpi`](https://github.com/mppsol/cpi)) is
-blocked on Solana platform-tools v1.49+ which has not shipped yet.
-
-## Differentiation
-
-[`sendaifun/solana-mpp`](https://github.com/sendaifun/solana-mpp) is an
-existing experimental Solana adapter for MPP — HTTP server middleware
-plus one-time charges and prepaid sessions, with in-memory storage and
-localnet examples. MPP.sol differs in two ways:
-
-1. **Production-grade settlement.** Devnet→mainnet path, persistent
-   session state, observability, formal receipt verification, conformance
-   tests against the upstream MPP spec.
-2. **CPI primitive.** MPP exposed as a Solana program other programs can
-   invoke. Lets on-chain protocols (vaults, DEXes, oracle consumers) pay
-   for off-chain resources directly, without an off-chain relayer.
-
-## Relationship to upstream MPP
-
-MPP.sol implements the MPP wire protocol as defined by Stripe and Tempo
-Labs. We track the IETF draft and intend to propose a Solana settlement
-method registration once the spec stabilizes.
-
-## Contributing
-
-Issues and discussion welcome. The spec is the highest-leverage place to
-contribute today; implementation work begins after v0.1 freeze.
-
-## Maintainership
-
-Maintained by [psyto](https://github.com/psyto). Licensed under Apache-2.0.
+Apache-2.0. Maintained by [@psyto](https://github.com/psyto).
